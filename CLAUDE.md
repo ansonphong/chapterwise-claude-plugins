@@ -1,6 +1,6 @@
 # ChapterWise Plugins — Claude Code Writing Toolkit
 
-Complete writing toolkit for manuscript import, AI analysis, story atlas generation, and custom readers. 24 slash commands, 32 analysis modules, 25+ Python scripts, 7 format converters.
+Complete writing toolkit for manuscript import, AI analysis, story atlas generation, and custom readers. 24 slash commands, 33 analysis modules, 25+ Python scripts, 7 format converters.
 
 ## Architecture
 
@@ -8,11 +8,11 @@ Complete writing toolkit for manuscript import, AI analysis, story atlas generat
 plugins/chapterwise/
 ├── .claude-plugin/plugin.json   # Plugin manifest (auto-discovered)
 ├── commands/                    # Slash commands (YAML frontmatter + markdown)
-├── modules/                     # 32 analysis modules (4 courses)
+├── modules/                     # 33 analysis modules (5 courses)
 ├── scripts/                     # Python utilities (stdin JSON → stdout JSON)
 ├── patterns/                    # Format conversion patterns + common utilities
 ├── templates/                   # Reader HTML templates (minimal, academic)
-├── references/                  # principles.md, language-rules.md, insert specs
+├── references/                  # principles.md, language-rules.md, insert specs, immersive-effects/comfort
 └── schemas/                     # Codex V1.2, analysis, research, recipe schemas
 ```
 
@@ -70,4 +70,11 @@ After implementing any plan:
 
 ## Recent Changes
 
-_Plugin is stable — no recent structural changes._
+- **2026-08-04** — v2.1.0. Added `immersive_design` module for dome shows and immersive experiences, backed by two new reference files (`immersive-effects.md`, 59 effects; `immersive-comfort.md`, vestibular thresholds and fulldome pacing). Renamed `gag_analysis` → `comedy_analysis`; the word "gag" is gone from the plugin, and the immersive unit is an "effect". New `immersive` course. Removed all billing vocabulary from `/atlas` — plugin users bring their own compute, so free/paid pass framing had no meaning here. Design spec: `../../plans/plugins/2026-08-04-immersive-design-module.md`.
+
+## Vocabulary Guards
+
+Two standing rules, enforced by `tests/test_immersive_design.py`:
+
+1. **Never say "gag."** It is theme-park jargon and fails the writer-facing vocabulary rule. Immersive techniques are **effects**; comedy analysis is **comedy**.
+2. **Never mention credits, paid/free tiers, or billing.** Those are `chapterwise-web` concepts. A plugin user is spending their own tokens. Where cost matters, describe the **scale of work** — passes, chapters, modules — not a price. ("Credits" in the attribution sense — model credits, web-source citations in `/research` — is a different word and is fine.)

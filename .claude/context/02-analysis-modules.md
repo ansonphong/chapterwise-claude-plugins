@@ -1,10 +1,12 @@
-# Analysis Modules (32 modules)
+# Analysis Modules (33 modules)
 
 All modules are `.md` files in `modules/` with YAML frontmatter (name, displayName, description, category, icon, applicableTypes). Discovered by `module_loader.py` from three search paths (built-in, user global, project-local).
 
+Two modules are backed by shipped reference files rather than carrying their domain knowledge inline: `immersive_design` loads `references/immersive-effects.md` (the effects catalog) and `references/immersive-comfort.md` (vestibular thresholds and pacing rules). Extending the catalog does not require touching the module prompt.
+
 ## Course Groupings
 
-Modules are organized into four courses (defined in `module_loader.py` COURSES dict):
+Modules are organized into five courses (defined in `module_loader.py` COURSES dict):
 
 ### Quick Taste -- fast per-chapter overview
 - `summary` -- Chapter Summary (key events, character interactions, developments)
@@ -31,8 +33,16 @@ Modules are organized into four courses (defined in `module_loader.py` COURSES d
 - `dream_symbolism` -- Dream Symbolism (dream logic, symbolic imagery, subconscious)
 - `immersion` -- Immersion (sensory detail, engagement, suspension of disbelief)
 
+### Immersive -- experiential design for dome shows and installations
+- `immersive_design` -- Immersive Design (effects catalog, crescendo/lull rhythm, vestibular comfort)
+- `immersion` -- Immersion (also in Simmering; prose-side counterpart)
+- `reader_emotions` -- Reader Emotions (emotional journey)
+- `story_pacing` -- Story Pacing (timing, tension distribution)
+
+Note the division of labour: `immersion` asks whether a text transports a reader; `immersive_design` asks whether a sequence would land on a 360° surface. They are complementary, not alternatives.
+
 ### Uncategorized (15 modules -- not in a course, available for direct or genre-based use)
-`ai_detector`, `alchemical_symbolism`, `critical_review`, `cultural_authenticity`, `eight_stage` (Nigel Watts), `four_weapons` (dialogue/action/description/introspection), `gag_analysis`, `misdirection_surprise`, `plot_holes`, `plot_twists`, `psychogeography`, `self_awareness` (meta-fiction), `status` (manuscript readiness), `story_strength`, `win_loss_wave`
+`ai_detector`, `alchemical_symbolism`, `comedy_analysis`, `critical_review`, `cultural_authenticity`, `eight_stage` (Nigel Watts), `four_weapons` (dialogue/action/description/introspection), `misdirection_surprise`, `plot_holes`, `plot_twists`, `psychogeography`, `self_awareness` (meta-fiction), `status` (manuscript readiness), `story_strength`, `win_loss_wave`
 
 ## How Modules Work
 

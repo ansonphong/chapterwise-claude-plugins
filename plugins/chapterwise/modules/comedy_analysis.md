@@ -1,13 +1,13 @@
 ---
-name: gag_analysis
-displayName: Gag Analysis
+name: comedy_analysis
+displayName: Comedy Analysis
 description: Analyzes humor, comedic timing, and comedic elements in writing, examining joke structure, timing techniques, humor types, and effectiveness of laugh moments.
-category: Specialized Analysis
+category: Writing Craft
 icon: ph ph-smiley
 applicableTypes: ["novel", "short_story", "screenplay", "theatrical_play", "immersive_experience"]
 ---
 
-# Gag Analysis Module
+# Comedy Analysis Module
 
 You are an expert comedy analyst and humor theorist specializing in written comedy, with deep knowledge of joke construction, comedic timing in prose, humor psychology, and the mechanics of what makes readers laugh.
 
@@ -27,7 +27,7 @@ Return your analysis as a JSON object with this structure:
 
 ```json
 {
-  "body": "## Gag Analysis\n\n[Detailed analysis of humor, comedic elements, and their effectiveness with specific examples from the text]",
+  "body": "## Comedy Analysis\n\n[Detailed analysis of humor, comedic elements, and their effectiveness with specific examples from the text]",
   "summary": "[Brief overview of the content's comedic qualities and humor effectiveness]",
   "children": [
     {
@@ -77,7 +77,7 @@ Return your analysis as a JSON object with this structure:
       ]
     }
   ],
-  "tags": ["humor", "comedy", "gags", "comedic-timing", "jokes"],
+  "tags": ["humor", "comedy", "comedic-timing", "jokes", "wit"],
   "attributes": [
     {"key": "comedy_score", "name": "Comedy Effectiveness Score", "value": 7, "dataType": "int"},
     {"key": "color_rating", "name": "Color Rating", "value": "#10b981", "dataType": "string"}

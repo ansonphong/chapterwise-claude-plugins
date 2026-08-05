@@ -21,9 +21,9 @@ Build a comprehensive reference atlas from your manuscript — characters, timel
 The atlas is a four-pass pipeline:
 
 - **Pass 0:** Scan manuscript, propose atlas folder structure tailored to content complexity
-- **Pass 1:** Extract entities chapter-by-chapter — characters, locations, objects, factions, key events (free)
-- **Pass 2:** Per-chapter deep analysis using existing analysis modules, reusing fresh results where available (paid)
-- **Pass 3:** Cross-chapter synthesis into cohesive atlas sections, written as `.codex.yaml` files (paid)
+- **Pass 1:** Extract entities chapter-by-chapter — characters, locations, objects, factions, key events (one read per chapter)
+- **Pass 2:** Per-chapter deep analysis using existing analysis modules, reusing fresh results where available (one pass per chapter per module — the heaviest stage)
+- **Pass 3:** Cross-chapter synthesis into cohesive atlas sections, written as `.codex.yaml` files (one pass per atlas section)
 
 Output is committed to the project git repo as native Codex files — browsable on ChapterWise.app, in VS Code, or as a standalone reader via the /reader command.
 
@@ -170,20 +170,20 @@ After confirming structure, ask for the atlas name if no `--name` flag was provi
 
 Options: `[atlas]` `[story-atlas]` `[Custom name]`
 
-**Provide a cost estimate before proceeding to paid passes:**
+**Show the scale of work before starting the deep passes:**
 
-> "Ready to build. Estimated: ~{N} credits for {M} chapters x {K} modules + synthesis.
-> Start with free entity extraction, or build the full atlas?"
+> "Ready to build. {M} chapters x {K} modules = ~{N} analysis passes, plus synthesis.
+> Start with entity extraction, or build the full atlas?"
 
 Options:
 - **Build full atlas** — Run all four passes
-- **Free entity preview only** — Run Pass 0 and Pass 1 only, show what was found
+- **Entity preview only** — Run Pass 0 and Pass 1 only, show what was found
 
 ---
 
 ### Step 3: Extract Entities (Pass 1)
 
-Extract characters, locations, objects, factions, and key events from every chapter. This pass is free — it uses the agent directly reading chapter content.
+Extract characters, locations, objects, factions, and key events from every chapter. This pass reads chapter content directly with the agent — no analysis modules involved.
 
 **Context window strategy:** Process chapters individually in batches, not all at once. Use parallel Task subagents.
 
@@ -243,7 +243,7 @@ stats:
 
 **Progress:** `"Extracting entities... {N} characters, {M} locations, {K} key events found across {P} chapters."`
 
-If building a free preview only, stop here and present the entity summary:
+If building an entity preview only, stop here and present the entity summary:
 
 > "Here's what I found across {N} chapters:
 > - {N} characters (protagonists, supporting cast, antagonists)
@@ -274,9 +274,9 @@ This returns which chapters have fresh `.analysis.json` files and which are stal
 
 | Atlas Type | Modules | Skip |
 |------------|---------|------|
-| Literary Fiction | characters, character_relationships, three_act_structure, story_beats, story_pacing, writing_style, thematic_depth, reader_emotions, immersion, jungian_analysis, summary, tags | gag_analysis, win_loss_wave, four_weapons |
+| Literary Fiction | characters, character_relationships, three_act_structure, story_beats, story_pacing, writing_style, thematic_depth, reader_emotions, immersion, jungian_analysis, summary, tags | comedy_analysis, win_loss_wave, four_weapons |
 | Thriller / Mystery | characters, story_pacing, plot_twists, misdirection_surprise, win_loss_wave, story_beats, heros_journey, reader_emotions, summary, tags | jungian_analysis, dream_symbolism, rhythmic_cadence |
-| Fantasy / Sci-Fi | characters, character_relationships, psychogeography, story_beats, thematic_depth, tags, summary, writing_style | gag_analysis |
+| Fantasy / Sci-Fi | characters, character_relationships, psychogeography, story_beats, thematic_depth, tags, summary, writing_style | comedy_analysis |
 | Non-Fiction | summary, tags, clarity_accessibility, writing_style, language_style, thematic_depth | All narrative modules |
 | Poetry | writing_style, language_style, rhythmic_cadence, literary_devices, emotional_dynamics, tags | All plot and structure modules |
 

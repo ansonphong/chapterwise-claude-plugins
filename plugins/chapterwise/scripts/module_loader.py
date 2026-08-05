@@ -38,6 +38,11 @@ COURSES = {
         "name": "Simmering",
         "description": "Depth and psychology",
         "modules": ["thematic_depth", "reader_emotions", "jungian_analysis", "character_relationships", "dream_symbolism", "immersion"]
+    },
+    "immersive": {
+        "name": "Immersive",
+        "description": "Experiential design — effects, rhythm, comfort",
+        "modules": ["immersive_design", "immersion", "reader_emotions", "story_pacing"]
     }
 }
 
@@ -50,7 +55,7 @@ GENRE_MODULE_MAP = {
             "thematic_depth", "reader_emotions", "immersion", "jungian_analysis",
             "dream_symbolism", "tags"
         ],
-        "skip": ["gag_analysis", "win_loss_wave", "four_weapons", "ai_detector"],
+        "skip": ["comedy_analysis", "win_loss_wave", "four_weapons", "ai_detector"],
         "reason": "Literary fiction emphasizes character depth, thematic analysis, and writing craft."
     },
     "thriller": {
@@ -68,7 +73,7 @@ GENRE_MODULE_MAP = {
             "story_beats", "thematic_depth", "tags", "writing_style",
             "three_act_structure", "heros_journey"
         ],
-        "skip": ["gag_analysis"],
+        "skip": ["comedy_analysis"],
         "reason": "Fantasy benefits from world-building, character depth, and structural analysis."
     },
     "nonfiction": {
@@ -79,7 +84,7 @@ GENRE_MODULE_MAP = {
         "skip": [
             "characters", "character_relationships", "three_act_structure",
             "story_beats", "heros_journey", "story_pacing", "plot_twists",
-            "misdirection_surprise", "gag_analysis", "four_weapons", "eight_stage"
+            "misdirection_surprise", "comedy_analysis", "four_weapons", "eight_stage"
         ],
         "reason": "Non-fiction prioritizes clarity, style, and accessibility over narrative structure."
     },
@@ -90,7 +95,7 @@ GENRE_MODULE_MAP = {
         ],
         "skip": [
             "story_beats", "three_act_structure", "plot_holes", "story_pacing",
-            "characters", "character_relationships", "gag_analysis"
+            "characters", "character_relationships", "comedy_analysis"
         ],
         "reason": "Poetry centers on rhythm, style, and thematic depth rather than plot structure."
     }

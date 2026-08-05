@@ -1,7 +1,7 @@
 {
   "name": "chapterwise",
   "description": "Complete writing toolkit for ChapterWise — import any manuscript, run AI analysis, build story atlases, generate research, create custom readers. Supports PDF, DOCX, Scrivener, Ulysses, Markdown, and more.",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "author": {
     "name": "Anson Phong"
   },
