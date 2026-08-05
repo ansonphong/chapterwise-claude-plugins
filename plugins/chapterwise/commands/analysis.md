@@ -37,6 +37,9 @@ Inspect the arguments and route to the appropriate path:
 | `analysis <module> --glob pattern` | Batch a single module across matched files — see Section 6 |
 | `analysis <module> [file] --report-only` | Re-render an existing report — see Step 2i |
 
+**Every route reads `.chapterwise/settings.json` first — see Section 0.** Settings belong
+to the project, so the course picker, a batch, and a single-file run all behave the same.
+
 ### Flags
 
 | Flag | Effect |
@@ -79,6 +82,75 @@ beside the manuscript, `/reports` is from the project root, `~/…` is a literal
 Settings are *intent* and are committed. The `*-recipe` folders beside them are *history*
 — what a command last did. Settings-shaped keys left in an older recipe are honoured until
 a settings file exists, and folded in when one is written.
+
+---
+
+## Section 0: Preflight — applies to every route
+
+**Sections 1, 2, 5 and 6 all obey this.** Settings are a property of the project, not of
+one invocation, so a course run, a batch, a plan and a single-file run must behave the
+same way. Anything below that says "every analysis" means every analysis.
+
+### Step 0a: Resolve settings before asking anything
+
+```bash
+echo '{"source": "ANY_SOURCE_FILE"}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/settings.py resolve
+```
+
+For a batch, resolve once against any file in the set — settings belong to the project,
+and every file in a project resolves to the same ones.
+
+Returns `report`, `report_format`, `report_dir` (already an absolute path), `depth`,
+`found`, and a `sources` map.
+
+### Step 0b: What to ask
+
+| `sources[key]` | Meaning | Do |
+|---|---|---|
+| `settings` | Written in `.chapterwise/settings.json` | **Never ask.** Use it, mention it in one clause |
+| `recipe` | Left by an older version | **Never ask.** Use it |
+| `default` | Nothing configured | Ask, with the proposal pre-selected |
+
+A flag beats all three for that run and is never persisted.
+
+### Step 0c: Export reports — every route, not just single-file
+
+Every analysis that writes results also exports a report, unless `report` is `false` or
+`--no-report` was passed. **This includes course runs, `--plan` runs, and `--all` /
+`--glob` batches** — one report per source file, written after that file's analyses land:
+
+```bash
+echo '{"source": "SOURCE_FILE", "module": "MODULE_NAME", "format": "FORMAT"}' \
+  | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/analysis_report.py
+```
+
+The script resolves settings itself, so `format` and the output folder may be omitted
+entirely and will still be right. Pass them only to override.
+
+Reports are per module per file. A course run of 3 modules across 28 chapters writes 84
+reports — say so before starting, and report the count once at the end rather than per
+file. If that is not wanted, `--no-report` or `"report": false` in settings turns it off
+for good.
+
+### Step 0d: Offer to save — once per project
+
+If `found` is `false` and the user made a choice this run, offer **once**, after the work
+is done:
+
+> "Save these as this project's defaults? Codex reports into `analysis/`."
+
+- **Save** — write `.chapterwise/settings.json`
+- **Not now** — ask again next time
+
+```bash
+echo '{"path": "SOURCE_FILE", "updates": {"analysis": {"report_format": "FORMAT", "report_dir": "analysis", "depth": "DEPTH", "report": true}}}' \
+  | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/settings.py set
+```
+
+**Once per project, not once per file.** A batch offers at the end, not 28 times. Never
+persist a value that came from a one-off flag.
+
+---
 
 ### Resolution
 
@@ -248,11 +320,29 @@ echo '{"recipe_path": ".chapterwise/analysis-recipe", "updates": {"modules_run":
 
 Save this silently — no user-facing message about saving.
 
-### Step 1g: Validate and report
+### Step 1g: Export reports
+
+Per **Step 0c**, a course run exports reports too — one per module per file. Settings
+decide the format and folder; the script reads them itself.
+
+Say the shape before starting, since a course run multiplies:
+
+> "3 modules across 28 chapters — 84 reports into `analysis/`."
+
+Batch the exports with the Task tool the same way the analyses were batched. Report the
+total once when they land, not per file.
+
+Skip entirely if `report` is `false` or `--no-report` was passed.
+
+### Step 1h: Offer to save the defaults
+
+Per **Step 0d** — once, at the end, only if nothing was configured yet.
+
+### Step 1i: Validate and report
 
 Run validation (Section 8) then report:
 
-> "Done. {modules_run_count} modules across {chapters_analyzed} chapters."
+> "Done. {modules_run_count} modules across {chapters_analyzed} chapters, {R} reports."
 
 ---
 
@@ -302,15 +392,8 @@ If `isStale` is `true`, proceed without asking.
 
 ### Step 2d: Read the settings, scan the structure, then propose
 
-**Read the project's settings first.** Anything already configured is not a question.
-
-```bash
-echo '{"source": "SOURCE_FILE"}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/settings.py resolve
-```
-
-Returns `report`, `report_format`, `report_dir` (already resolved to a real path),
-`depth`, plus `found` and a `sources` map saying whether each value came from
-`settings`, an older `recipe`, or the plugin `default`.
+**Read the project's settings first — Step 0a.** Anything already configured is not a
+question, per the table in Step 0b.
 
 **Scan before asking anything else.** A manuscript's shape determines what a useful
 question even is, and this is cheap — structure only, never full content.
@@ -349,15 +432,9 @@ want. **Codex** is structured — it re-imports, renders in the web app, and can
 analyzed further. **Both** costs nothing extra; the report is a re-render of results
 already on disk, not a second analysis.
 
-**Two things suppress a question: a flag, and a setting.**
-
-| `sources[...]` | What to do |
-|---|---|
-| `settings` or `recipe` | Configured. **Do not ask.** Use it and say so in one clause: "Report as codex, per your settings." |
-| `default` | Not configured. Ask, with the proposal pre-selected |
-
-A flag beats both and is never written back — a one-off run should not redefine the
-project. If every value is either flagged or configured, ask nothing and run.
+**Two things suppress a question: a flag, and a setting** — see Step 0b. If every value
+is either flagged or configured, ask nothing and run. Say which in one clause: "Report as
+codex, per your settings."
 
 ### Step 2e: Resolve the nodes to analyze
 
@@ -460,28 +537,9 @@ switch format without spending anything.
 
 ### Step 2j: Offer to save the choice — once
 
-Skip entirely if `settings.py resolve` reported `found: true`, or if the answers match
-what was already configured. **A configured project is never asked again.**
-
-Otherwise — the first real run in this project — ask once, after the work is done and
-the user has seen the result:
-
-> "Save these as this project's defaults? Codex reports into `analysis/`."
-
-- **Save** — write `.chapterwise/settings.json`
-- **Not now** — run as asked, ask again next time
-
-On **Save**:
-
-```bash
-echo '{"path": "SOURCE_FILE", "updates": {"analysis": {"report_format": "FORMAT", "report_dir": "analysis", "depth": "DEPTH", "report": true}}}' \
-  | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/settings.py set
-```
-
-Then confirm in one line: `"Saved to .chapterwise/settings.json."`
-
-**Only write what the user actually chose.** Do not persist a value that came from a
-one-off flag — `--report=markdown` on a single run is not a decision about the project.
+Per **Step 0d**. Skip entirely if `found` was `true` or the answers match what was already
+configured — a configured project is never asked again. Confirm in one line:
+`"Saved to .chapterwise/settings.json."`
 
 Also record the run in the recipe, as before — that is run history, not configuration:
 
@@ -641,7 +699,13 @@ echo '{"project_path": ".", "type": "analysis"}' | python3 ${CLAUDE_PLUGIN_ROOT}
 echo '{"recipe_path": ".chapterwise/analysis-recipe", "updates": {"genre": "GENRE", "modules_recommended": MODULES, "modules_skipped": SKIPPED}}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/recipe_manager.py update
 ```
 
-If user chose "Run this plan", proceed to execute each course following Section 1e logic.
+If user chose "Run this plan", proceed to execute each course following Section 1e logic —
+which includes report export (Step 0c) and the one-time save offer (Step 0d).
+
+Include the report count in the plan summary before running, so the scope is stated up
+front:
+
+> "{N} modules × {M} chapters — {N×M} analyses, {N×M} reports into `analysis/`."
 
 ---
 
@@ -655,7 +719,9 @@ Run a single module on all files matching the glob pattern.
 # Discover matching files
 ```
 
-Use Glob tool to find files matching the pattern. For each matched file, run the module via Section 2 logic.
+Use Glob tool to find files matching the pattern. For each matched file, run the module via
+Section 2 logic — settings resolved once up front (Step 0a), a report per file (Step 0c),
+and the save offer once at the very end (Step 0d), never per file.
 
 For large batches (10+ files), spawn parallel Task agents:
 
@@ -681,11 +747,18 @@ Load all modules:
 echo '{}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/module_loader.py list
 ```
 
-For each module, run it on each file following Section 2 logic.
+For each module, run it on each file following Section 2 logic. Settings apply here exactly
+as they do to a single file: resolve once (Step 0a), export a report per module per file
+(Step 0c), offer to save once at the end (Step 0d).
 
 Spawn parallel Task agents per module for efficiency:
 
 > "Running {N} modules on {M} files in parallel..."
+
+State the report volume before starting — `--all` across a folder multiplies fast:
+
+> "33 modules × 28 chapters — 924 analyses. `--no-report` if you don't want a report for
+> each."
 
 ### `--force` flag
 

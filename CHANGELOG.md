@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.0] - 2026-08-05
+
+### Fixed
+
+- **Settings now apply to every `/analysis` route, not just single-file runs.**
+  v2.6.0 wired the settings layer into Section 2 only. The course picker,
+  `--plan`, and the `--all` / `--glob` batches never exported a report at all,
+  so `report_format` was universal in the script and ignored by three of the
+  four routes — configured in name, absent in behaviour.
+
+### Added
+
+- **Section 0: Preflight** in `commands/analysis.md` — one place that states
+  how settings are resolved (0a), what may be asked (0b), that every route
+  exports reports (0c), and that the save offer happens once per project rather
+  than once per file (0d). Sections 1, 2, 5 and 6 all defer to it.
+- **Course runs, plan runs, and batches export reports.** One per module per
+  file, honouring `report_format` and `report_dir`. The volume is stated before
+  starting — a 3-module course over 28 chapters says "84 reports" up front —
+  and `--no-report` or `"report": false` turns it off for good.
+- Doc guards in `tests/test_settings.py` assert every route section references
+  the preflight steps, and that the settings block documented in the command
+  matches `DEFAULTS` in code.
+
 ## [2.6.0] - 2026-08-05
 
 ### Added

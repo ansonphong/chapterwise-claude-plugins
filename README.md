@@ -257,6 +257,10 @@ what you just chose, and once the file exists you are never asked again.
 for that run and is never written back — `--report=markdown` once is not a decision about
 the project.
 
+Settings apply to **every** `/analysis` route — a single file, the course picker, `--plan`,
+and `--all` / `--glob` batches all read them and all export reports. A batch offers to save
+once at the end, not once per file.
+
 `report_dir` resolves the way codex `include` paths do, so there is one rule to learn:
 
 | Value | Resolves to |

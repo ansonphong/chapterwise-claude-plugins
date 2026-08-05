@@ -310,3 +310,53 @@ class TestReportHonoursSettings:
         build({'source': str(src), 'module': 'summary',
                'format': 'markdown', 'generated': '2026-08-05'})
         assert not (root / '.chapterwise' / 'settings.json').exists()
+
+
+class TestEverySectionObeysSettings:
+    """
+    Settings belong to the project, so every route must honour them.
+
+    v2.6.0 shipped the settings layer wired into the single-file route only.
+    The course picker and the batch routes never exported a report at all, so
+    `report_format` was universal in the script and not in the command — which
+    is the kind of gap that reads as "configured" and behaves as "ignored".
+    """
+
+    COMMAND = (Path(__file__).parent.parent / 'plugins' / 'chapterwise' /
+               'commands' / 'analysis.md')
+
+    @pytest.fixture(scope='class')
+    def doc(self):
+        return self.COMMAND.read_text(encoding='utf-8')
+
+    def test_a_shared_preflight_section_exists(self, doc):
+        assert '## Section 0: Preflight' in doc
+        for step in ('### Step 0a', '### Step 0b', '### Step 0c', '### Step 0d'):
+            assert step in doc, step
+
+    def test_the_course_picker_exports_and_offers(self, doc):
+        section = doc.split('## Section 1:')[1].split('## Section 2:')[0]
+        assert 'Step 0c' in section, 'course runs must export reports'
+        assert 'Step 0d' in section, 'course runs must offer to save settings'
+
+    def test_the_single_file_route_defers_to_preflight(self, doc):
+        section = doc.split('## Section 2:')[1].split('## Section 3:')[0]
+        assert 'Step 0a' in section and 'Step 0d' in section
+
+    def test_the_batch_routes_obey_settings(self, doc):
+        section = doc.split('## Section 6:')[1].split('## Section 7:')[0]
+        for step in ('Step 0a', 'Step 0c', 'Step 0d'):
+            assert step in section, f'batch runs must honour {step}'
+
+    def test_the_plan_route_obeys_settings(self, doc):
+        section = doc.split('## Section 5:')[1].split('## Section 6:')[0]
+        assert 'Step 0c' in section and 'Step 0d' in section
+
+    def test_the_save_offer_is_once_per_project(self, doc):
+        assert 'Once per project, not once per file' in doc
+
+    def test_the_documented_defaults_match_the_code(self, doc):
+        """A settings block in the docs that drifts from DEFAULTS is a lie."""
+        block = doc.split('```json', 1)[1].split('```', 1)[0]
+        documented = json.loads(block)['analysis']
+        assert documented == DEFAULTS['analysis']
