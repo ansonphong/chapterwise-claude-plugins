@@ -194,7 +194,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/index_generator.py . -v
 | Scenario | Approach |
 |----------|----------|
 | New project | Minimal index with auto-discovery |
-| Existing content | Generate with `--scan` to detect structure |
+| Existing content | Run the generator — it scans the directory and populates `children` |
 | Curated order | Explicit children with `order` fields |
 | Mixed | Explicit folders, auto-discover within |
 

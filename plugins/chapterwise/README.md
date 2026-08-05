@@ -519,7 +519,7 @@ Projects under 50 chapters embed content directly in `manifest.json`. Larger pro
 **Run the whole chain in one command.**
 
 ```
-/pipeline [source-file] [--skip-atlas] [--skip-reader]
+/pipeline [source-file] [--skip-reader] [--skip-atlas] [--skip-analysis]
 ```
 
 Import → Analysis → Atlas → Reader, with sensible defaults chosen automatically at each step and any already-fresh step skipped.
@@ -529,6 +529,7 @@ Import → Analysis → Atlas → Reader, with sensible defaults chosen automati
 | *(none)* | All 4 steps |
 | `--skip-reader` | 3 steps — stops after Atlas |
 | `--skip-atlas` | 2 steps — stops after Analysis (this also skips Reader) |
+| `--skip-analysis` | 1 step — import only |
 
 In pipeline mode the sub-commands take their defaults rather than interviewing you: flat structure unless parts are detected, Markdown output, front matter excluded, genre-recommended analysis modules, "Story Atlas" or "Reference Atlas" per genre, minimal reader template. You're only asked when something is genuinely ambiguous.
 
@@ -621,7 +622,7 @@ No flags. Everything is inferred from how you phrase the request:
 ```
 > Forces web search regardless of topic familiarity, cites every source fetched.
 
-**Notes** — If research on that topic already exists, you're asked whether to update it in place (preserving sections, bumping the timestamp, appending credits) or create a dated new version. Referencing your manuscript when no project exists falls back to standalone with a note rather than erroring.
+**Notes** — If research on that topic already exists, you're asked whether to update it in place (preserving sections, bumping the timestamp, appending to `credits`) or create a dated new version. Referencing your manuscript when no project exists falls back to standalone with a note rather than erroring.
 
 ---
 
@@ -937,8 +938,12 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/index_generator.py . --include-md
 
 | Flag | Effect |
 |---|---|
-| `--dry-run` | Preview without writing |
+| `--name <name>` | Project name (defaults to the folder name) |
+| `--title <title>` | Project title (defaults to the name) |
+| `--summary <text>` | Project summary |
 | `--include-md` | Include Markdown files in discovery |
+| `-o`, `--output <path>` | Output path (defaults to `<path>/index.codex.yaml`) |
+| `-d`, `--dry-run` | Preview without writing |
 | `-v` | Verbose |
 
 **Child node fields** — `name` (required), `title`, `order` (default 999), `emoji`, `status` (default `private`), `featured`, `hidden`, `children` (auto-discovered if omitted).
@@ -1417,7 +1422,7 @@ Results are written beside the source chapter, in Codex V1.3:
           "type": "analysis-entry",
           "status": "published",
           "attributes": [
-            { "key": "model", "value": "claude-sonnet-4" },
+            { "key": "model", "value": "<the model that actually ran>" },
             { "key": "sourceHash", "value": "a1b2c3d4e5f6a7b8" },
             { "key": "analysisStatus", "value": "current" },
             { "key": "timestamp", "value": "2026-08-04T14:22:33Z" }

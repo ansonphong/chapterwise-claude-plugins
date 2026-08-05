@@ -1,6 +1,6 @@
 # ChapterWise Plugins — Claude Code Writing Toolkit
 
-Complete writing toolkit for manuscript import, AI analysis, story atlas generation, and custom readers. 24 slash commands, 33 analysis modules, 25+ Python scripts, 7 format converters.
+Complete writing toolkit for manuscript import, AI analysis, story atlas generation, and custom readers. 24 slash commands, 33 analysis modules (5 courses), 28 Python scripts, 7 format converters.
 
 ## Architecture
 
@@ -69,6 +69,8 @@ After implementing any plan:
 5. Update `../../.claude/STATUS.md` and `../../plans/exec-order.md`
 
 ## Recent Changes
+
+- **2026-08-04** — v2.3.0. Documentation drift swept out of the command files, and one shipped-but-unreachable feature restored. The `immersive` course landed in `module_loader.py` in v2.1.0 but was never wired into `/analysis` — the picker offered four courses and the prose said four, so `immersive_design` could only be reached by naming it directly or via `--all`/`--plan`. It is now in the picker, `analysis list`, the `--plan` summary, and the language table. Also fixed: `/analysis` claimed 31 modules (33); `/pipeline` described `--skip-analysis` but omitted it from `argument-hint`; `/index` documented a `--scan` flag `index_generator.py` has never had; `/spreadsheet`, `/convert-to-markdown`, and `/format-regen-ids` were missing their `chapterwise:` triggers; `/research-deep` did not answer to its own filename. `plugins/chapterwise/README.md` went from a 40-line stub to the full command reference (all 24 commands with arguments, workflow, outputs, examples; plus format, modules, and custom-module authoring), and the redundant root `.claude-plugin/plugin.json` stub is gone.
 
 - **2026-08-04** — v2.2.0. Codex **V1.3** upgrade. The plugin had been emitting V1.2 while the published spec moved on. Schemas renamed to `*-v1.3.schema.json` and taught the V1.3 content array (`width`, `diagram`/`spreadsheet` types, extended `include` resolution for `.mermaid`/`.mmd`/`.csv`/`.xlsx`/`.spreadsheet.yaml`). `/format` now documents the content array — previously `width` and the new types existed only in `/diagram` and `/spreadsheet`, so the general formatter never emitted them. New `scripts/codex_version.py` is the single source of truth for the version; every stamping script imports it. Fixed: the auto-fixer silently downgraded V1.3 documents to 1.2 on every run, and `scrivener_file_writer.py` stamped the plugin's own version (`2.1`) as a codex `formatVersion`. Note: `.spreadsheet.yaml` keeps its own independent `formatVersion: "1.0"` — unrelated to the codex spec.
 - **2026-08-04** — v2.1.0. Added `immersive_design` module for dome shows and immersive experiences, backed by two new reference files (`immersive-effects.md`, 59 effects; `immersive-comfort.md`, vestibular thresholds and fulldome pacing). Renamed `gag_analysis` → `comedy_analysis`; the word "gag" is gone from the plugin, and the immersive unit is an "effect". New `immersive` course. Removed all billing vocabulary from `/atlas` — plugin users bring their own compute, so free/paid pass framing had no meaning here. Design spec: `../../plans/plugins/2026-08-04-immersive-design-module.md`.

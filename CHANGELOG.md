@@ -5,6 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2026-08-04
+
+### Fixed
+
+- **The `immersive` course is reachable again.** It was added to
+  `module_loader.py` in v2.1.0 but never wired into `/analysis`, which offered
+  four courses and described itself as having four. The course existed in code
+  and could not be selected from the picker; `immersive_design` was only
+  reachable by naming it directly or through `--all` / `--plan`. It now appears
+  in the picker, the `analysis list` output, the `--plan` summary, and the
+  progress-language table.
+- **`/analysis` claimed 31 modules.** There are 33.
+- **`/pipeline` hid `--skip-analysis`.** The flag was described in the body but
+  missing from `argument-hint`, so it never surfaced in the command's own help.
+- **`/index` documented a `--scan` flag that does not exist.**
+  `index_generator.py` has no such argument and the generator always scans. The
+  use-case table now describes what actually happens.
+- **Three commands were missing their namespaced triggers.**
+  `chapterwise:spreadsheet`, `chapterwise:convert-to-markdown`, and
+  `chapterwise:format-regen-ids` now exist, matching every sibling command.
+- **`/research-deep` could not be invoked by its own filename.** Its only
+  triggers were `research:deep` and `chapterwise:research:deep`, so
+  `research-deep` (the name the file and the skill actually carry) did not
+  resolve. Both forms now work.
+
+### Changed
+
+- **`plugins/chapterwise/README.md` is now a full command reference.** It was a
+  40-line stub listing 20 of the 24 commands with one-line descriptions. It now
+  documents every command with arguments, workflow, inputs and outputs, worked
+  examples, and caveats, plus the Codex V1.3 format, project layout, the
+  staleness model, all 33 analysis modules grouped by course, the
+  `.analysis.json` shape, and how to author a custom module.
+- **Root `README.md`** carries working install instructions (add the
+  marketplace, then install from it) and links to the reference rather than
+  duplicating it.
+
+### Removed
+
+- **Redundant root `.claude-plugin/plugin.json`.** This repo is a marketplace;
+  the stub declared the whole repo an empty plugin with no `commands/` beside
+  it, and had drifted to 2.1.0 while the real manifest read 2.2.0.
+
 ## [2.2.0] - 2026-08-04
 
 ### Added

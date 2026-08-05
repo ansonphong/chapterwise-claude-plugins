@@ -8,6 +8,7 @@ triggers:
   - codex to md
   - simplify codex
   - export to md
+  - chapterwise:convert-to-markdown
 argument-hint: "[input.codex.yaml]"
 ---
 

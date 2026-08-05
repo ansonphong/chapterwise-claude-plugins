@@ -2,6 +2,8 @@
 description: "Deep research — generate a multi-document compendium on any topic"
 allowed-tools: Read, Grep, Glob, Bash, Write, Edit, AskUserQuestion, Task, WebSearch, WebFetch, Agent
 triggers:
+  - research-deep
+  - chapterwise:research-deep
   - research:deep
   - chapterwise:research:deep
 argument-hint: "<topic or instruction>"

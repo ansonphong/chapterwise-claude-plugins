@@ -1,6 +1,6 @@
 # Plugin Overview
 
-ChapterWise is a Claude Code plugin (v2.2.0) providing a complete writing toolkit -- manuscript import, AI analysis, story atlas generation, research, and static reader builds. It lives under `plugins/chapterwise/`.
+ChapterWise is a Claude Code plugin (v2.3.0) providing a complete writing toolkit -- manuscript import, AI analysis, story atlas generation, research, and static reader builds. It lives under `plugins/chapterwise/`.
 
 ## Manifest
 

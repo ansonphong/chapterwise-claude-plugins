@@ -7,7 +7,7 @@ triggers:
   - full pipeline
   - import analyze atlas reader
   - chapterwise:pipeline
-argument-hint: "[source-file] [--skip-reader] [--skip-atlas]"
+argument-hint: "[source-file] [--skip-reader] [--skip-atlas] [--skip-analysis]"
 ---
 
 # ChapterWise Pipeline

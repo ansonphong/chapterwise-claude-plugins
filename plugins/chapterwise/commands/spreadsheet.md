@@ -8,6 +8,7 @@ triggers:
   - data table
   - csv to codex
   - spreadsheet yaml
+  - chapterwise:spreadsheet
 argument-hint: "[description or file.csv]"
 ---
 

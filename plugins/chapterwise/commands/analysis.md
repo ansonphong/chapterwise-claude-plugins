@@ -16,7 +16,7 @@ argument-hint: "[module] [file] [--flags]"
 
 ## Overview
 
-Run AI analysis on any Codex file using 31 specialized modules. Analysis reads a chapter's content, applies a focused analytical lens (characters, structure, pacing, style, themes, and more), and saves results to a `.analysis.json` file alongside the source. Results are versioned — re-running a module on an unchanged file is detected and skipped unless forced.
+Run AI analysis on any Codex file using 33 specialized modules. Analysis reads a chapter's content, applies a focused analytical lens (characters, structure, pacing, style, themes, and more), and saves results to a `.analysis.json` file alongside the source. Results are versioned — re-running a module on an unchanged file is detected and skipped unless forced.
 
 Analysis can be run on a single file, batched across a folder, or run as a full multi-module plan across the entire project. The plan mode scans the manuscript, selects modules that matter for this genre, groups them into courses, and runs them in the right order.
 
@@ -88,7 +88,7 @@ If genre is not available, proceed without it — the user will pick courses man
 echo '{}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/module_loader.py courses
 ```
 
-This returns the four courses with their module lists.
+This returns the five courses with their module lists.
 
 ### Step 1d: Present course picker
 
@@ -101,6 +101,7 @@ Options (allow multi-select by listing them separately):
 - **Slow roast** — three-act structure, story beats, pacing, hero's journey. Root-level structural analysis.
 - **Spice rack** — writing style, language style, rhythm, clarity. Craft-level analysis per chapter.
 - **Simmering** — thematic depth, reader emotions, Jungian analysis, relationships, dream symbolism, immersion. Deep per-chapter analysis.
+- **Immersive** — immersive design, immersion, reader emotions, pacing. Experiential design for dome shows and projection work.
 - **All courses** — Run everything above.
 
 If genre was detected, note the recommended courses based on genre:
@@ -160,6 +161,13 @@ For "Simmering" (per-chapter depth modules):
 
 Progress message:
 > "Simmering thematic analysis... emotions, Jungian, relationships."
+
+Spawn parallel Task agents per module.
+
+For "Immersive" (per-chapter experiential modules):
+
+Progress message:
+> "Mapping immersive design... effects, rhythm, comfort on {N} chapters."
 
 Spawn parallel Task agents per module.
 
@@ -312,6 +320,12 @@ Simmering
   dream_symbolism    — Dream and symbolic content
   immersion          — Immersive quality assessment
 
+Immersive
+  immersive_design   — Effects, rhythm, and comfort for dome and projection work
+  immersion          — Immersive quality assessment
+  reader_emotions    — Emotional arc and impact
+  story_pacing       — Pacing and momentum analysis
+
 Other
   [remaining modules not in a course]
 ```
@@ -388,6 +402,7 @@ Quick taste      — summary, characters, tags ({chapter_count} chapters)
 Slow roast       — three-act structure, story beats, pacing (root-level)
 Spice rack       — writing style, language, rhythm ({chapter_count} chapters)
 Simmering        — thematic depth, emotions, Jungian ({chapter_count} chapters)
+Immersive        — immersive design, immersion, pacing ({chapter_count} chapters)
 
 Skipped: {skipped_module_1} ({reason}), {skipped_module_2} ({reason})
 ```
@@ -598,6 +613,7 @@ Follow `${CLAUDE_PLUGIN_ROOT}/references/language-rules.md` for all shared messa
 | Slow roast course | Slow roasting | "Slow roasting structure... three-act, story beats, pacing." |
 | Spice rack course | Spice rack | "Spice rack... writing style, language, rhythm on 28 chapters." |
 | Simmering course | Simmering | "Simmering thematic analysis... emotions, Jungian, relationships." |
+| Immersive course | Mapping | "Mapping immersive design... effects, rhythm, comfort on 28 chapters." |
 | Parallel execution | Running in parallel | "Running in parallel... done." |
 | Done | Done | "Done. 18 modules across 28 chapters." |
 

@@ -7,6 +7,7 @@ triggers:
   - new ids
   - fresh ids
   - duplicate ids
+  - chapterwise:format-regen-ids
 argument-hint: "[file.codex.yaml]"
 ---
 
