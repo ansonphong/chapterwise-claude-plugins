@@ -11,7 +11,7 @@ argument-hint: "<topic or instruction>"
 
 ## Overview
 
-Research any topic and produce structured reference files in Codex format, stored in `.chapterwise/research/`. Research is clean and standalone by default — no manuscript scanning unless explicitly requested. The agent decides depth, structure, and web search usage based on topic scope, but the user's natural language always overrides.
+Research any topic and produce structured reference files in Codex format, stored in a `research/` folder at the project root. Research is clean and standalone by default — no manuscript scanning unless explicitly requested. The agent decides depth, structure, and web search usage based on topic scope, but the user's natural language always overrides.
 
 Read and follow `${CLAUDE_PLUGIN_ROOT}/references/principles.md` — especially **LLM Judgment, User Override**.
 
@@ -52,11 +52,12 @@ Returns `format`, `depth`, and `output_dir` (already an absolute path), plus `fo
 |---|---|---|
 | `research.format` | `codex-md` | `codex-md` or `codex-json` |
 | `research.depth` | `standard` | `standard` or `deep` |
-| `research.output_dir` | `.chapterwise/research` | Relative to the **project root** |
+| `research.output_dir` | `research` | Relative to the **project root** |
 
-Research output stays under `.chapterwise/` on purpose: it is reference material consulted
-*while* writing, not a deliverable derived *from* the manuscript. Atlases, readers and
-analysis reports are the latter, which is why those sit in visible folders.
+`output_dir` behaves exactly as it does in every other section — bare and `./` relative,
+a leading `/` from the project root, `~` literal. Nothing is hidden by default. A writer
+who would rather research not be part of what they hand to collaborators sets
+`"output_dir": ".chapterwise/research"`; that is their call, not the command's.
 
 `sources` marks each value `settings` or `default`. Prompt language still overrides
 everything, for this invocation only.
@@ -162,7 +163,7 @@ Generate thorough, well-structured content. For deep mode, aim for comprehensive
 
 ### Step 8: Write Output
 
-**Output root:** `.chapterwise/research/` (or user-specified path)
+**Output root:** the resolved `research.output_dir` from Step 2 — `research/` unless configured
 
 **Folder and file naming:** Use LLM judgment to create clean, descriptive slugs from the topic.
 
@@ -171,7 +172,7 @@ Examples:
 - Topic "How cyanide poisoning works" → `cyanide-poisoning.codex.md` (single file)
 - Topic "All trickster gods across mythology" (deep) → `trickster-gods/overview.codex.md` + sub-files
 
-**If updating existing research:** Detect by matching the slugified topic against existing filenames or folder names in `.chapterwise/research/`. If a match is found:
+**If updating existing research:** Detect by matching the slugified topic against existing filenames or folder names in the resolved output folder. If a match is found:
 
 1. Use AskUserQuestion: "Research on '{topic}' already exists at {path}. Update it or create a new version?"
    - **Update** — Merge new content into existing file. Preserve existing sections, add new ones, update the `updated` timestamp. Append new model credits.
@@ -295,7 +296,7 @@ For Codex Markdown (`.codex.md`) files:
 
 If available, run the codex validator:
 ```bash
-echo '{"path": ".chapterwise/research/{topic-slug}/", "fix": true}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/codex_validator.py
+echo '{"path": "{output_dir}/{topic-slug}/", "fix": true}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/codex_validator.py
 ```
 
 - If all clean: say nothing — validation is invisible.
@@ -309,15 +310,15 @@ echo '{"path": ".chapterwise/research/{topic-slug}/", "fix": true}' | python3 ${
 Report what was created:
 
 **Single file:**
-> "Done. Research saved to `.chapterwise/research/cyanide-poisoning.codex.md`."
+> "Done. Research saved to `research/cyanide-poisoning.codex.md`."
 
 **Multi-file:**
-> "Done. {N} research files saved to `.chapterwise/research/sumerian-gods/`."
+> "Done. {N} research files saved to `research/sumerian-gods/`."
 
 Then show the file tree:
 
 ```
-.chapterwise/research/sumerian-gods/
+research/sumerian-gods/
 ├── overview.codex.md
 ├── anu.codex.md
 ├── enlil.codex.md
@@ -352,7 +353,7 @@ Follow `${CLAUDE_PLUGIN_ROOT}/references/language-rules.md` for all shared rules
 | Manuscript scan | Cross-referencing | "Cross-referencing with manuscript... 3 chapters mention Enlil." |
 | Structuring output | Distilling | "Distilling research... 5 entries across 3 sections." |
 | Writing files | Assembling | "Assembling research files... 5 entries." |
-| Completion | Done | "Done. 5 research files saved to .chapterwise/research/sumerian-gods/." |
+| Completion | Done | "Done. 5 research files saved to research/sumerian-gods/." |
 
 ---
 

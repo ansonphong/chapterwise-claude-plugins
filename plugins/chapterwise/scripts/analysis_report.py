@@ -13,9 +13,10 @@ report comes out in document order — show order, not write order.
     echo '{"source":"show.codex.yaml","module":"immersive_design",
            "format":"markdown"}' | analysis_report.py
 
-Output lands in <source_dir>/analysis/, alongside atlas/ and reader/ — the
-convention for deliverables derived from the manuscript, as against
-.chapterwise/ which holds machine state and reference inputs.
+Output lands in the resolved `analysis.output_dir` — by default `analysis/`
+beside the manuscript. Every command that writes output has the same setting
+and resolves it by the same rules; whether output is visible or tucked into
+.chapterwise/ is the user's choice, per section.
 """
 import hashlib
 import json
@@ -61,7 +62,7 @@ from settings import DEFAULTS as SETTING_DEFAULTS  # noqa: E402
 from settings import load as load_settings  # noqa: E402
 from settings import resolve_report_dir  # noqa: E402
 
-REPORT_DIR = SETTING_DEFAULTS['analysis']['report_dir']
+REPORT_DIR = SETTING_DEFAULTS['analysis']['output_dir']
 RENDERABLE = ('markdown', 'codex')
 FORMATS = RENDERABLE + ('both',)
 
@@ -380,7 +381,9 @@ def build(data: Dict[str, Any]) -> Dict[str, Any]:
         raise ValueError(f"Unknown format {fmt!r}. Use one of: {', '.join(FORMATS)}")
 
     report_dir = resolve_report_dir(
-        source_path, data.get('report_dir') or analysis_settings.get('report_dir'))
+        source_path,
+        data.get('output_dir') or data.get('report_dir')
+        or analysis_settings.get('output_dir'))
 
     analysis_path = get_analysis_file_path(source_path)
     if not analysis_path.exists():

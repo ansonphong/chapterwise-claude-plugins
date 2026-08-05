@@ -62,11 +62,11 @@ section per command, so a project has one place to look rather than one per comm
 ```json
 {
   "version": 1,
-  "analysis": { "report": true, "report_format": "codex", "report_dir": "analysis", "depth": "auto" },
+  "analysis": { "report": true, "report_format": "codex", "output_dir": "analysis", "depth": "auto" },
   "atlas":    { "output_dir": "atlas", "sections": ["characters", "timeline", "themes",
                                                    "plot-structure", "locations", "relationships"] },
   "reader":   { "output_dir": "reader", "template": "minimal", "theme": "light" },
-  "research": { "output_dir": ".chapterwise/research", "format": "codex-md", "depth": "standard" }
+  "research": { "output_dir": "research", "format": "codex-md", "depth": "standard" }
 }
 ```
 
@@ -80,10 +80,14 @@ echo '{"path": ".", "updates": {"reader": {"theme": "dark"}}}' | python3 ${CLAUD
 `resolve` returns the section's values with paths already resolved, plus `found` and a
 `sources` map marking each value `settings`, `recipe`, or `default`.
 
-**Path values resolve the way codex `include` paths do** — bare and `./` are relative,
-a leading `/` is the **project root**, `~` is a literal path. What "relative" means depends
-on what the artifact belongs to: an analysis report sits beside the manuscript it
-describes, while an atlas, a reader and research are per-project.
+**Every section has an `output_dir`, and it resolves identically everywhere** — bare and
+`./` are relative, a leading `/` is the **project root**, `~` is a literal path. What
+"relative" means follows from what the artifact belongs to: an analysis report describes
+one manuscript and sits beside it; an atlas, a reader and research belong to the project.
+
+**Visible or hidden is a value, not a rule.** No section is hidden by default. A user who
+wants research (or anything else) out of the way sets `output_dir` to
+`.chapterwise/research`. Do not bake that choice into a command.
 
 **Rules:**
 - Read settings before asking anything

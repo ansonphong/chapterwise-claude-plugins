@@ -70,6 +70,8 @@ After implementing any plan:
 
 ## Recent Changes
 
+- **2026-08-05** — v2.10.0. One pattern, no special cases. v2.9.0 folded research into settings but left it alone in defaulting to `.chapterwise/`, reasoning that research is an input rather than a deliverable — fine as something a *writer* chooses, wrong as a shape only one section has. Every section that writes output now has an `output_dir` resolved by identical rules, and nothing is hidden by default; `research` lands in a visible `research/` folder, and any section can be tucked away with `"output_dir": ".chapterwise/…"`. `analysis.report_dir` renamed to `analysis.output_dir` so the key is the same everywhere (flag `--output-dir`); a settings file written by 2.6–2.9 is migrated on read and normalised on the next write rather than silently ignored. The only remaining difference between sections is what "relative" means, and that follows from what the artifact belongs to: an analysis report describes one manuscript and sits beside it, while an atlas, a reader and research belong to the project.
+
 - **2026-08-05** — v2.9.0. One configuration surface. `/research` kept its preferences in `.claude/chapterwise.local.md` — a second config file in a different format (markdown frontmatter) with its own key vocabulary, for one command. Retired: research is now a `.chapterwise/settings.json` section like the rest, with `default_depth` → `depth` and `output_path` → `output_dir` so key names mean the same thing everywhere, and both values validated at write time. `references/principles.md` documents the cascade in terms of `settings.json`/`settings.py`; the cascade itself is unchanged (plugin defaults → settings → command variant → prompt language, prompt language still winning for one run without mutating what is saved). Research output stays under `.chapterwise/` on purpose — it is material consulted *while* writing, unlike atlases, readers and analysis reports which are derived *from* the manuscript. Guards assert no doc still points at the retired file and that the sections documented in `principles.md` match `DEFAULTS` in code.
 
 - **2026-08-05** — v2.8.0. Settings extended past `/analysis` to `/atlas` and `/reader` — one `.chapterwise/settings.json`, one section per command, rather than a config surface per command. `settings.py resolve` takes a `section` and returns that section's values with paths already resolved plus a scoped `sources`/`configured`; configuring one section leaves the others asking. Both commands now skip their question when a value is configured (`/atlas` its structure question, `/reader` template selection) and offer once to save after a first successful build. Output paths know what they belong to: an analysis report resolves relative to the manuscript it describes, an atlas and a reader relative to the project root, since those are built once for the project. `reader.template` and `reader.theme` are validated at write time. Choices left in older `reader-recipe` (`design.template`, `design.theme`) and `atlas-recipe` (`sections`) are honoured and folded forward. `/research` still keeps its preferences in `.claude/chapterwise.local.md` — a separate older surface, not folded in.
@@ -89,17 +91,21 @@ After implementing any plan:
 
 ## Output Locations
 
-Where a generated file goes follows one rule — **input vs. output**, not hidden vs.
-readable:
+**Every command that writes output has an `output_dir` setting, and they all behave
+identically.** Same key, same path rules — bare and `./` relative, a leading `/` from the
+project root, `~` literal. The only thing that differs is what "relative" is relative to,
+and that follows from what the artifact belongs to: an analysis report describes one
+manuscript and sits beside it; an atlas, a reader and research belong to the project.
 
 | Location | Contents |
 |---|---|
-| `.chapterwise/` | machine state and reference *inputs* — `*-recipe`, `research/`, `analysis-modules/` |
-| top-level, visible | deliverables derived *from* the manuscript — `atlas/`, `reader/`, `analysis/` |
+| `.chapterwise/` | machine state the user does not author — `*-recipe`, `settings.json`, `analysis-modules/` |
+| top-level, visible | generated output — `analysis/`, `atlas/`, `reader/`, `research/` |
 
-`research/` is readable and still hidden, because it is material consulted *while*
-writing. An analysis report is derived *from* the manuscript, so it is visible, committed,
-and handed to collaborators. Do not bury a deliverable in `.chapterwise/`.
+**Visible or hidden is a value, not a rule.** Nothing generated is hidden by default. A
+writer who wants research (or reports, or anything else) out of the way sets
+`"output_dir": ".chapterwise/research"`. Do not bake that choice into a command, and do
+not give one section a shape the others do not have — that was the v2.9.0 mistake.
 
 ## Vocabulary Guards
 

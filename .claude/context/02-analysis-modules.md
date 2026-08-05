@@ -89,8 +89,10 @@ never offering the alternative is not asking — that was the v2.4.0 defect.
 `.chapterwise/settings.json` with a section per command (`analysis`, `atlas`, `reader`),
 resolved `plugin defaults → .chapterwise/settings.json → flags`. `resolve` takes a
 `section` and scopes its `sources`/`configured` to it, so configuring one command leaves
-the others asking. Analysis report dirs are file-relative; atlas and reader output dirs
-are project-relative, because those are built once for the project. Defaults are **codex** into an `analysis/` folder beside the analyzed file.
+the others asking. Every section has an `output_dir` resolved by identical rules; the only difference is
+what "relative" means — the analyzed file for `analysis`, the project root for `atlas`,
+`reader` and `research`. Nothing is hidden by default; pointing a section into
+`.chapterwise/` is the user's choice. Defaults are **codex** into an `analysis/` folder beside the analyzed file.
 `analysis_report.build()` reads settings itself, so a direct script call gets the same
 answer the command does. A `sources` map marks each value `default`, `recipe`, or
 `settings` — a command asks only about `default` values, which is what stops it asking

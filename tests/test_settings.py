@@ -52,7 +52,7 @@ def write_settings(root: Path, payload: dict) -> Path:
 class TestDefaults:
     def test_codex_into_an_analysis_folder(self):
         assert DEFAULTS['analysis']['report_format'] == 'codex'
-        assert DEFAULTS['analysis']['report_dir'] == 'analysis'
+        assert DEFAULTS['analysis']['output_dir'] == 'analysis'
 
     def test_no_settings_file_still_yields_usable_settings(self, project):
         root, src = project
@@ -121,8 +121,8 @@ class TestReadingWhatIsWritten:
         root, src = project
         write_settings(root, {'version': 1, 'analysis': {'report_format': 'markdown'}})
         effective, sources, _p, _f = load(src)
-        assert effective['analysis']['report_dir'] == 'analysis'
-        assert sources['analysis.report_dir'] == 'default'
+        assert effective['analysis']['output_dir'] == 'analysis'
+        assert sources['analysis.output_dir'] == 'default'
 
     def test_a_corrupt_file_does_not_take_the_project_down(self, project):
         root, src = project
@@ -146,10 +146,10 @@ class TestWriting:
 
     def test_set_merges_rather_than_replaces(self, project):
         root, src = project
-        action_set({'path': str(src), 'updates': {'analysis': {'report_dir': 'reports'}}})
+        action_set({'path': str(src), 'updates': {'analysis': {'output_dir': 'reports'}}})
         action_set({'path': str(src), 'updates': {'analysis': {'report_format': 'markdown'}}})
         effective, _s, _p, _f = load(src)
-        assert effective['analysis']['report_dir'] == 'reports'
+        assert effective['analysis']['output_dir'] == 'reports'
         assert effective['analysis']['report_format'] == 'markdown'
 
     def test_an_invalid_value_is_refused(self, project):
@@ -198,11 +198,11 @@ class TestRecipeInheritance:
         root, src = project
         self._recipe(root, {'type': 'analysis', 'report_format': 'markdown',
                             'depth': 'root,leaf'})
-        action_set({'path': str(src), 'updates': {'analysis': {'report_dir': 'out'}}})
+        action_set({'path': str(src), 'updates': {'analysis': {'output_dir': 'out'}}})
         effective, _s, _p, _f = load(src)
         assert effective['analysis']['report_format'] == 'markdown'
         assert effective['analysis']['depth'] == 'root,leaf'
-        assert effective['analysis']['report_dir'] == 'out'
+        assert effective['analysis']['output_dir'] == 'out'
 
 
 class TestAskOnce:
@@ -229,10 +229,10 @@ class TestResolve:
     def test_resolve_gives_the_analysis_path_everything_it_needs(self, project):
         root, src = project
         write_settings(root, {'version': 1,
-                              'analysis': {'report_format': 'both', 'report_dir': '/out'}})
+                              'analysis': {'report_format': 'both', 'output_dir': '/out'}})
         result = action_resolve({'source': str(src)})
         assert result['report_format'] == 'both'
-        assert result['report_dir'] == str(root / 'out')
+        assert result['output_dir'] == str(root / 'out')
         assert result['report'] is True
 
     def test_validate_flags_a_bad_format(self):
@@ -285,7 +285,7 @@ class TestReportHonoursSettings:
     def test_settings_move_the_folder(self, analyzed):
         from analysis_report import build
         root, src = analyzed
-        write_settings(root, {'version': 1, 'analysis': {'report_dir': '/reports'}})
+        write_settings(root, {'version': 1, 'analysis': {'output_dir': '/reports'}})
         result = build({'source': str(src), 'module': 'summary', 'generated': '2026-08-05'})
         assert Path(result['path']).parent == root / 'reports'
 
@@ -395,7 +395,7 @@ class TestAtlasAndReaderSections:
     def test_analysis_output_stays_beside_the_file(self, project):
         _root, src = project
         result = action_resolve({'source': str(src)})
-        assert result['report_dir'] == str(src.parent / 'analysis')
+        assert result['output_dir'] == str(src.parent / 'analysis')
 
     def test_a_section_only_reports_its_own_provenance(self, project):
         root, src = project
@@ -491,14 +491,14 @@ class TestResearchSection:
 
     def test_research_has_defaults(self):
         assert DEFAULTS['research'] == {
-            'output_dir': '.chapterwise/research',
+            'output_dir': 'research',
             'format': 'codex-md',
             'depth': 'standard',
         }
 
     def test_every_section_uses_the_same_key_vocabulary(self):
-        """output_dir and depth mean the same thing wherever they appear."""
-        for section in ('atlas', 'reader', 'research'):
+        """One pattern: every section says output_dir, and depth means depth."""
+        for section in ('analysis', 'atlas', 'reader', 'research'):
             assert 'output_dir' in DEFAULTS[section], section
         for section in ('analysis', 'research'):
             assert 'depth' in DEFAULTS[section], section
@@ -506,14 +506,18 @@ class TestResearchSection:
     def test_research_output_is_project_relative(self, project):
         root, src = project
         result = action_resolve({'source': str(src), 'section': 'research'})
-        assert result['output_dir'] == str(root / '.chapterwise' / 'research')
+        assert result['output_dir'] == str(root / 'research')
 
-    def test_research_stays_under_chapterwise_by_default(self):
-        """Research is an input consulted while writing, not a deliverable."""
-        assert DEFAULTS['research']['output_dir'].startswith('.chapterwise/')
-        for section in ('analysis', 'atlas', 'reader'):
-            value = DEFAULTS[section].get('output_dir') or DEFAULTS[section]['report_dir']
-            assert not value.startswith('.chapterwise'), section
+    def test_no_section_is_hidden_by_default(self):
+        """
+        Visible or hidden is the user's call, per section — a value, not a rule.
+
+        Research used to default into `.chapterwise/` on the argument that it is
+        an input rather than a deliverable. That reasoning is fine as a default
+        *someone might choose*, and wrong as a shape only one section has.
+        """
+        for section in ('analysis', 'atlas', 'reader', 'research'):
+            assert not DEFAULTS[section]['output_dir'].startswith('.chapterwise'), section
 
     def test_research_format_is_validated(self, project):
         _root, src = project
@@ -567,3 +571,60 @@ class TestOneConfigurationSurface:
                'principles.md').read_text(encoding='utf-8')
         block = doc.split('```json', 1)[1].split('```', 1)[0]
         assert set(json.loads(block)) == set(DEFAULTS)
+
+
+class TestOnePatternForOutput:
+    """
+    Every section that writes output has an `output_dir`, and they behave alike.
+
+    v2.9.0 gave research a hidden default on the argument that it is an input
+    rather than a deliverable. That is a reasonable thing for a *user* to
+    choose and a bad thing for the tool to decide — it made one section a
+    special case, which is exactly what a settings schema is supposed to avoid.
+    """
+
+    SECTIONS = ('analysis', 'atlas', 'reader', 'research')
+
+    def test_every_section_names_the_key_the_same_way(self):
+        assert all('output_dir' in DEFAULTS[s] for s in self.SECTIONS)
+        assert not any('report_dir' in DEFAULTS[s] for s in self.SECTIONS)
+
+    def test_every_section_resolves_paths_by_the_same_rules(self, project):
+        root, src = project
+        for section in self.SECTIONS:
+            write_settings(root, {'version': 1, section: {'output_dir': '/shared'}})
+            result = action_resolve({'source': str(src), 'section': section})
+            assert result['output_dir'] == str(root / 'shared'), section
+
+    def test_any_section_can_be_hidden_by_the_user(self, project):
+        root, src = project
+        for section in self.SECTIONS:
+            write_settings(root, {'version': 1,
+                                  section: {'output_dir': f'.chapterwise/{section}'}})
+            result = action_resolve({'source': str(src), 'section': section})
+            assert result['output_dir'].endswith(f'.chapterwise/{section}'), section
+
+    def test_a_settings_file_written_before_the_rename_still_works(self, project):
+        """`report_dir` was renamed to `output_dir`; do not silently ignore it."""
+        root, src = project
+        write_settings(root, {'version': 1, 'analysis': {'report_dir': 'old-reports'}})
+        result = action_resolve({'source': str(src)})
+        assert result['output_dir'] == str(src.parent / 'old-reports')
+
+    def test_the_rename_is_normalised_on_the_next_write(self, project):
+        root, src = project
+        path = write_settings(root, {'version': 1, 'analysis': {'report_dir': 'kept'}})
+        action_set({'path': str(src), 'updates': {'analysis': {'depth': 'leaf'}}})
+        written = json.loads(path.read_text(encoding='utf-8'))
+        assert written['analysis']['output_dir'] == 'kept'
+        assert 'report_dir' not in written['analysis']
+
+    def test_the_report_generator_honours_the_renamed_key(self, project):
+        from analysis_report import build
+        from analysis_writer import add_analysis_result
+        root, src = project
+        add_analysis_result(src, 'summary', {'body': 'b', 'summary': 's'},
+                            model='claude-opus-5')
+        write_settings(root, {'version': 1, 'analysis': {'output_dir': '/out'}})
+        result = build({'source': str(src), 'module': 'summary', 'generated': '2026-08-05'})
+        assert Path(result['path']).parent == root / 'out'

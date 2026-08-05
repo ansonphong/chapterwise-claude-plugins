@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.10.0] - 2026-08-05
+
+### Changed
+
+- **One pattern for every section.** v2.9.0 folded research into the settings
+  file but left it a special case: it alone defaulted into `.chapterwise/`, on
+  the argument that research is an input rather than a deliverable. That is a
+  fine thing for a *writer* to choose and a bad thing for the tool to decide —
+  it gave one section a shape the others did not have.
+
+  Every section that writes output now has an `output_dir`, resolved by the
+  same rules, and **nothing is hidden by default**:
+
+  | Section | `output_dir` | Relative to |
+  |---|---|---|
+  | `analysis` | `analysis` | the analyzed file |
+  | `atlas` | `atlas` | the project root |
+  | `reader` | `reader` | the project root |
+  | `research` | `research` | the project root |
+
+  Visible or hidden is a value, per section: set
+  `"output_dir": ".chapterwise/research"` and it is out of the way.
+
+- **`analysis.report_dir` is now `analysis.output_dir`**, so the key is the
+  same everywhere. A settings file written by 2.6–2.9 is migrated on read and
+  normalised on the next write — the old key is never silently ignored. The
+  flag is `--output-dir`.
+- `research` output defaults to a visible `research/` folder at the project
+  root rather than `.chapterwise/research/`.
+
+### Note
+
+The only remaining difference between sections is what "relative" means, and
+that follows from what the artifact belongs to rather than from taste: an
+analysis report describes one manuscript and sits beside it; an atlas, a reader
+and a research file belong to the project.
+
 ## [2.9.0] - 2026-08-05
 
 ### Changed

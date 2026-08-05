@@ -46,7 +46,7 @@ to the project, so the course picker, a batch, and a single-file run all behave 
 |------|--------|
 | `--depth root\|N\|leaf\|auto\|all` | Resolution. Comma lists allowed: `--depth root,leaf` analyzes the whole file **and** every leaf. Default `auto` |
 | `--report[=markdown\|codex\|both]` | Export a report. Default from settings, then `codex` |
-| `--report-dir <path>` | Where the report goes. Relative = beside the file; leading `/` = project root |
+| `--output-dir <path>` | Where the report goes. Relative = beside the file; leading `/` = project root |
 | `--no-report` | Analyze only, no export |
 | `--report-only` | Re-render the report from stored results; runs no analysis |
 | `--force` | Skip staleness checks and overwrite an existing report |
@@ -67,7 +67,7 @@ anything is asked, and written only when the user says to:
   "analysis": {
     "report": true,
     "report_format": "codex",
-    "report_dir": "analysis",
+    "output_dir": "analysis",
     "depth": "auto"
   }
 }
@@ -76,8 +76,10 @@ anything is asked, and written only when the user says to:
 Resolution, lowest to highest: **plugin defaults → `.chapterwise/settings.json` → flags.**
 Defaults are codex reports into an `analysis/` folder beside the analyzed file.
 
-`report_dir` resolves the way codex `include` paths do — `analysis` and `./analysis` sit
-beside the manuscript, `/reports` is from the project root, `~/…` is a literal path.
+`output_dir` resolves the way codex `include` paths do — `analysis` and `./analysis` sit
+beside the manuscript, `/reports` is from the project root, `~/…` is a literal path. Every
+section uses this same key and these same rules; put reports under `.chapterwise/analysis`
+if you would rather they were not visible.
 
 Settings are *intent* and are committed. The `*-recipe` folders beside them are *history*
 — what a command last did. Settings-shaped keys left in an older recipe are honoured until
@@ -100,7 +102,7 @@ echo '{"source": "ANY_SOURCE_FILE"}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/set
 For a batch, resolve once against any file in the set — settings belong to the project,
 and every file in a project resolves to the same ones.
 
-Returns `report`, `report_format`, `report_dir` (already an absolute path), `depth`,
+Returns `report`, `report_format`, `output_dir` (already an absolute path), `depth`,
 `found`, and a `sources` map.
 
 ### Step 0b: What to ask
@@ -143,7 +145,7 @@ is done:
 - **Not now** — ask again next time
 
 ```bash
-echo '{"path": "SOURCE_FILE", "updates": {"analysis": {"report_format": "FORMAT", "report_dir": "analysis", "depth": "DEPTH", "report": true}}}' \
+echo '{"path": "SOURCE_FILE", "updates": {"analysis": {"report_format": "FORMAT", "output_dir": "analysis", "depth": "DEPTH", "report": true}}}' \
   | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/settings.py set
 ```
 

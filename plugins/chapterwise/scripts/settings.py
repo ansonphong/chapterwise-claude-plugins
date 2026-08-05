@@ -46,7 +46,7 @@ DEFAULTS: Dict[str, Any] = {
     'analysis': {
         'report': True,
         'report_format': 'codex',
-        'report_dir': 'analysis',
+        'output_dir': 'analysis',
         'depth': 'auto',
     },
     'atlas': {
@@ -60,7 +60,7 @@ DEFAULTS: Dict[str, Any] = {
         'theme': 'light',
     },
     'research': {
-        'output_dir': '.chapterwise/research',
+        'output_dir': 'research',
         'format': 'codex-md',
         'depth': 'standard',
     },
@@ -75,15 +75,24 @@ VALID = {
     'research.depth': ('standard', 'deep'),
 }
 
-# Where each section's output goes, and what it is relative to. An analysis
-# report belongs beside the manuscript it describes; an atlas and a reader are
-# built once for the whole project.
+# Every section has an `output_dir`, resolved by the same rules. The only thing
+# that differs is what "relative" is relative to, and that follows from what the
+# artifact belongs to: an analysis report describes one manuscript and sits
+# beside it; an atlas, a reader and a research file belong to the project.
+#
+# Whether output is visible or tucked into `.chapterwise/` is a value, not a
+# rule — set `output_dir` to `.chapterwise/research` and it is hidden; set it to
+# `research` and it is not. That choice is the user's, per section.
 OUTPUT_DIRS = {
-    'analysis': ('report_dir', 'file'),
+    'analysis': ('output_dir', 'file'),
     'atlas': ('output_dir', 'project'),
     'reader': ('output_dir', 'project'),
     'research': ('output_dir', 'project'),
 }
+
+# Renamed for consistency: every section says `output_dir`. A settings file
+# written before that is migrated on read and normalised on the next write.
+LEGACY_KEYS = {'analysis': {'report_dir': 'output_dir'}}
 
 # Settings-shaped keys that earlier versions left in `*-recipe/recipe.yaml`.
 # Dotted keys read into the recipe's nested blocks.
@@ -202,6 +211,8 @@ def load(path: Path) -> Tuple[Dict[str, Any], Dict[str, str], Path, bool]:
     file_path = settings_path(root)
 
     explicit = _read_json(file_path) if file_path.exists() else None
+    if explicit is not None:
+        explicit = _migrate_legacy_keys(explicit)
     inherited = _recipe_settings(root) if explicit is None else {}
 
     effective = _merge(DEFAULTS, inherited)
@@ -223,6 +234,18 @@ def load(path: Path) -> Tuple[Dict[str, Any], Dict[str, str], Path, bool]:
     return effective, sources, file_path, explicit is not None
 
 
+def _migrate_legacy_keys(settings: Dict[str, Any]) -> Dict[str, Any]:
+    """Rename keys an earlier version wrote, so nothing is silently ignored."""
+    for section, renames in LEGACY_KEYS.items():
+        block = settings.get(section)
+        if not isinstance(block, dict):
+            continue
+        for old, new in renames.items():
+            if old in block:
+                block.setdefault(new, block.pop(old))
+    return settings
+
+
 def resolve_report_dir(source: Path, report_dir: str) -> Path:
     """
     Where a report for `source` belongs.
@@ -237,7 +260,7 @@ def resolve_report_dir(source: Path, report_dir: str) -> Path:
     A leading `/` means the project root, not the filesystem root — same as an
     `include`. Use `~` when you genuinely mean somewhere else on the machine.
     """
-    raw = str(report_dir or DEFAULTS['analysis']['report_dir']).strip()
+    raw = str(report_dir or DEFAULTS['analysis']['output_dir']).strip()
     return _resolve(source, raw, 'file')
 
 
@@ -288,7 +311,7 @@ def action_set(data: Dict[str, Any]) -> Dict[str, Any]:
     root = find_project_root(Path(data.get('path', '.')).expanduser().resolve())
     file_path = settings_path(root)
 
-    current = _read_json(file_path) or {}
+    current = _migrate_legacy_keys(_read_json(file_path) or {})
     if not current:
         # Fold in anything an older recipe was carrying, so writing settings
         # for the first time does not quietly reset choices already made.

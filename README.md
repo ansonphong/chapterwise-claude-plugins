@@ -243,7 +243,7 @@ command:
   "analysis": {
     "report": true,
     "report_format": "codex",
-    "report_dir": "analysis",
+    "output_dir": "analysis",
     "depth": "auto"
   },
   "atlas": {
@@ -257,7 +257,7 @@ command:
     "theme": "light"
   },
   "research": {
-    "output_dir": ".chapterwise/research",
+    "output_dir": "research",
     "format": "codex-md",
     "depth": "standard"
   }
@@ -268,24 +268,30 @@ command:
 |---|---|---|
 | `analysis.report` | `true` | Export a report at all |
 | `analysis.report_format` | `codex` | `markdown`, `codex`, or `both` |
-| `analysis.report_dir` | `analysis` | Where reports go, relative to **the analyzed file** |
+| `analysis.output_dir` | `analysis` | Where reports go, relative to **the analyzed file** |
 | `analysis.depth` | `auto` | Which nodes get their own pass |
 | `atlas.output_dir` | `atlas` | Where the atlas is built, relative to **the project root** |
 | `atlas.sections` | the six above | Which atlas sections to build |
 | `reader.output_dir` | `reader` | Where the reader is built, relative to **the project root** |
 | `reader.template` | `minimal` | `minimal`, `academic`, or `custom` |
 | `reader.theme` | `light` | Which theme the reader opens in |
-| `research.output_dir` | `.chapterwise/research` | Where research lands, relative to **the project root** |
+| `research.output_dir` | `research` | Where research lands, relative to **the project root** |
 | `research.format` | `codex-md` | `codex-md` or `codex-json` |
 | `research.depth` | `standard` | `standard` or `deep` |
 
-An analysis report belongs beside the manuscript it describes; an atlas, a reader and
-research are per-project. That is why the first is file-relative and the rest are
-project-relative.
+**Every section works the same way.** Same key (`output_dir`), same path rules, same
+defaults-then-flags resolution. The only thing that differs is what "relative" is relative
+to, and that follows from what the artifact belongs to: an analysis report describes one
+manuscript and sits beside it, while an atlas, a reader and a research file belong to the
+project.
 
-Research stays under `.chapterwise/` on purpose: it is material consulted *while* writing.
-Atlases, readers and analysis reports are derived *from* the manuscript, so they sit in
-visible folders you commit and hand to collaborators.
+**Visible or hidden is your call, per section.** Nothing is hidden by default. Point any
+section into `.chapterwise/` if you would rather it were not part of what you hand to
+collaborators:
+
+```json
+{ "research": { "output_dir": ".chapterwise/research" } }
+```
 
 Sections are independent. Configuring the reader does not stop `/atlas` from asking about
 its sections on first run.
@@ -299,7 +305,7 @@ and `--all` / `--glob` batches all read them and all export reports. A batch off
 once at the end, not once per file. `/atlas`, `/reader` and `/research` read their own
 sections the same way.
 
-`report_dir` resolves the way codex `include` paths do, so there is one rule to learn:
+`output_dir` resolves the way codex `include` paths do, so there is one rule to learn:
 
 | Value | Resolves to |
 |---|---|
@@ -444,7 +450,7 @@ Pick this when you know the source is a `.scriv` bundle. Pick `/import` for anyt
 |---|---|
 | `--depth root\|N\|leaf\|auto\|all` | Resolution — which nodes get their own pass. Comma lists allowed. Default `auto` |
 | `--report[=markdown\|codex\|both]` | Export a readable report. Default from settings, then `codex` |
-| `--report-dir <path>` | Where the report goes. Relative = beside the file, leading `/` = project root |
+| `--output-dir <path>` | Where the report goes. Relative = beside the file, leading `/` = project root |
 | `--no-report` | Analyze only, no export |
 | `--report-only` | Re-render a report from stored results — runs no analysis |
 | `--force` | Ignore freshness, re-run, overwrite an existing report |
@@ -774,7 +780,7 @@ Finds your project by looking for `index.codex.yaml` in the current directory an
 /research <topic or instruction>
 ```
 
-Standalone by default — it researches the topic, not your manuscript, unless you ask it to. Output lands in `.chapterwise/research/`.
+Standalone by default — it researches the topic, not your manuscript, unless you ask it to. Output lands in a `research/` folder at the project root — `research.output_dir` in [settings](#settings) moves it, including into `.chapterwise/` if you would rather it stayed out of the way.
 
 No flags. Everything is inferred from how you phrase the request:
 
@@ -828,7 +834,7 @@ Identical to `/research` in every mechanism — preferences, credits, manuscript
 **Outputs**
 
 ```
-.chapterwise/research/trickster-gods/
+research/trickster-gods/
 ├── overview.codex.md       # synthesizes patterns across all of them
 ├── loki.codex.md
 ├── anansi.codex.md

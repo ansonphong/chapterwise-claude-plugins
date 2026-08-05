@@ -59,7 +59,7 @@ Follow the exact same command flow as `${CLAUDE_PLUGIN_ROOT}/commands/research.m
 `/research:deep all trickster gods across world mythologies`
 
 ```
-.chapterwise/research/trickster-gods/
+research/trickster-gods/
 ├── overview.codex.md          # Synthesis: role of tricksters across cultures
 ├── loki.codex.md              # Norse trickster
 ├── anansi.codex.md            # West African/Caribbean trickster
