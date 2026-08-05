@@ -111,15 +111,44 @@ def ordered_scopes(source_path: Path, entries: Dict[str, Dict]) -> List[Dict[str
 
 # ── markdown ─────────────────────────────────────────────────────────────────
 
+def _opens_with_heading(content: str, name: str) -> bool:
+    """True when content's first line is a markdown heading naming this section."""
+    first = (content.lstrip().split('\n', 1)[0] if content else '').strip()
+    if not first.startswith('#'):
+        return False
+    return first.lstrip('#').strip().casefold() == name.strip().casefold()
+
+
+def stable_id(*parts: str) -> str:
+    """
+    Deterministic UUID for a report node.
+
+    Regenerating a report from unchanged results must produce an identical
+    file, so ids are derived from what the node *is* rather than minted fresh.
+    """
+    import uuid
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, 'chapterwise:analysis-report:' + '|'.join(parts)))
+
+
+def _yaml_scalar(value: str) -> str:
+    """Quote a frontmatter scalar safely."""
+    return '"' + str(value).replace('\\', '\\\\').replace('"', '\\"') + '"'
+
+
 def render_markdown(ctx: Dict[str, Any]) -> str:
-    lines = [
-        f"# {ctx['moduleName']} — {ctx['sourceName']}",
+    # Codex Lite frontmatter — makes the report a valid codex document rather
+    # than loose markdown, so the rest of the toolchain can read it back.
+    title = f"{ctx['moduleName']} — {ctx['sourceName']}"
+    body_lines = [
+        '',
+        f"# {title}",
         '',
         f"*{ctx['entryCount']} analyses · generated {ctx['generated']} · "
         f"model: {ctx['model']}*",
         '',
     ]
 
+    lines = body_lines
     for item in ctx['items']:
         entry = item['entry']
         if item['scope'] == ROOT_SCOPE:
@@ -139,12 +168,14 @@ def render_markdown(ctx: Dict[str, Any]) -> str:
             lines += [str(entry['body']).strip(), '']
 
         for child in entry.get('children', []) or []:
-            content = child.get('content') or child.get('body') or ''
-            if child.get('name'):
+            content = str(child.get('content') or child.get('body') or '').strip()
+            # Modules commonly open a child with its own heading. Emitting the
+            # child name as well would print the title twice.
+            if child.get('name') and not _opens_with_heading(content, child['name']):
                 sub = '#' * min(item['depth'] + 2, 6)
                 lines += [f"{sub} {child['name']}", '']
             if content:
-                lines += [str(content).strip(), '']
+                lines += [content, '']
 
         metrics = {k: v for k, v in attrs_of(entry).items()
                    if k not in ('model', 'sourceHash', 'analysisStatus', 'timestamp',
@@ -158,7 +189,26 @@ def render_markdown(ctx: Dict[str, Any]) -> str:
         if entry.get('tags'):
             lines += ['`' + '` `'.join(str(t) for t in entry['tags']) + '`', '']
 
-    return '\n'.join(lines).rstrip() + '\n'
+    body = '\n'.join(lines).rstrip() + '\n'
+
+    # Frontmatter last, so word_count reflects the body it describes.
+    frontmatter = [
+        '---',
+        f"id: {stable_id(ctx['sourceFile'], ctx['module'], ctx['generated'])}",
+        f"name: {_yaml_scalar(title)}",
+        'type: analysis-report',
+        f"summary: {_yaml_scalar(ctx['summary'])}",
+        f"module: {ctx['module']}",
+        f"sourceFile: {_yaml_scalar(ctx['sourceFile'])}",
+        f"generated: {ctx['generatedISO']}",
+        f"model: {_yaml_scalar(ctx['model'])}",
+        f"entryCount: {ctx['entryCount']}",
+        f"word_count: {len(body.split())}",
+        'status: published',
+        f"tags: analysis, {ctx['module'].replace('_', '-')}, report",
+        '---',
+    ]
+    return '\n'.join(frontmatter) + body
 
 
 # ── codex ────────────────────────────────────────────────────────────────────
@@ -168,13 +218,11 @@ def render_codex(ctx: Dict[str, Any]) -> str:
     Codex V1.3 report. Structure follows commands/format.md — every node carries
     a UUID id, metadata.formatVersion is set, and the tree mirrors the source.
     """
-    import uuid
-
     children = []
     for item in ctx['items']:
         entry = item['entry']
         node = {
-            'id': str(uuid.uuid4()),
+            'id': stable_id(ctx['sourceFile'], ctx['module'], item['scope']),
             'type': 'analysis-section',
             'name': 'Overview' if item['scope'] == ROOT_SCOPE else item['name'],
             'attributes': [
@@ -197,7 +245,8 @@ def render_codex(ctx: Dict[str, Any]) -> str:
         subs = []
         for child in entry.get('children', []) or []:
             subs.append({
-                'id': str(uuid.uuid4()),
+                'id': stable_id(ctx['sourceFile'], ctx['module'], item['scope'],
+                                child.get('name') or str(len(subs))),
                 'type': 'analysis-subsection',
                 'name': child.get('name') or 'Section',
                 'body': child.get('content') or child.get('body') or '',
@@ -213,11 +262,10 @@ def render_codex(ctx: Dict[str, Any]) -> str:
             'created': ctx['generatedISO'],
             'updated': ctx['generatedISO'],
         },
-        'id': str(uuid.uuid4()),
+        'id': stable_id(ctx['sourceFile'], ctx['module'], ctx['generated']),
         'type': 'analysis-report',
         'name': f"{ctx['moduleName']} — {ctx['sourceName']}",
-        'summary': (f"{ctx['entryCount']} {ctx['moduleName']} analyses of "
-                    f"{ctx['sourceName']}, in document order."),
+        'summary': ctx['summary'],
         'attributes': [
             {'key': 'module', 'value': ctx['module'], 'dataType': 'string'},
             {'key': 'sourceFile', 'value': ctx['sourceFile'], 'dataType': 'string'},
@@ -261,6 +309,8 @@ def build(data: Dict[str, Any]) -> Dict[str, Any]:
 
     ctx = {
         'module': module,
+        'summary': (f"{len(items)} {module_display_name(analysis, module)} analyses of "
+                    f"{source_path.name}, in document order."),
         'moduleName': module_display_name(analysis, module),
         'sourceName': source_path.name.split('.codex')[0],
         'sourceFile': source_path.name,

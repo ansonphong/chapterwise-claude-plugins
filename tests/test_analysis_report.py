@@ -207,3 +207,70 @@ class TestErrors:
         source = SCRIPT.read_text(encoding='utf-8')
         for forbidden in ('anthropic', 'openai', 'requests.post', 'urllib.request'):
             assert forbidden not in source, f"report generator reaches for {forbidden}"
+
+
+class TestHeadingDeduplication:
+    """Modules routinely open a child with its own heading."""
+
+    def test_child_heading_not_printed_twice(self, show, tmp_path):
+        from analysis_writer import add_analysis_result
+        add_analysis_result(
+            show, 'dupe',
+            {'body': 'Body.', 'summary': 'S.',
+             'children': [{'name': 'Motion Budget',
+                           'content': '## Motion Budget\n\nThe budget.'}]},
+            model='claude-opus-5')
+        result = build({'source': str(show), 'module': 'dupe',
+                        'generated': '2026-08-04', 'force': True})
+        text = Path(result['path']).read_text(encoding='utf-8')
+        assert text.count('Motion Budget') == 1
+
+    def test_child_heading_kept_when_content_has_none(self, show):
+        from analysis_writer import add_analysis_result
+        add_analysis_result(
+            show, 'plain',
+            {'body': 'Body.', 'summary': 'S.',
+             'children': [{'name': 'Effects in Play', 'content': 'Just prose.'}]},
+            model='claude-opus-5')
+        result = build({'source': str(show), 'module': 'plain',
+                        'generated': '2026-08-04', 'force': True})
+        text = Path(result['path']).read_text(encoding='utf-8')
+        assert 'Effects in Play' in text and 'Just prose.' in text
+
+    def test_different_heading_is_not_treated_as_duplicate(self, show):
+        from analysis_writer import add_analysis_result
+        add_analysis_result(
+            show, 'diff',
+            {'body': 'Body.', 'summary': 'S.',
+             'children': [{'name': 'Comfort & Load',
+                           'content': '## Something Else\n\nText.'}]},
+            model='claude-opus-5')
+        result = build({'source': str(show), 'module': 'diff',
+                        'generated': '2026-08-04', 'force': True})
+        text = Path(result['path']).read_text(encoding='utf-8')
+        assert 'Comfort & Load' in text and 'Something Else' in text
+
+
+class TestCodexLiteFrontmatter:
+    """The markdown report is a Codex Lite document, not loose markdown."""
+
+    def _text(self, show):
+        build({'source': str(show), 'module': MODULE,
+               'generated': '2026-08-04', 'force': True})
+        return (show.parent / 'analysis' /
+                'show-immersive-design-2026-08-04.md').read_text(encoding='utf-8')
+
+    def test_has_frontmatter(self, show):
+        text = self._text(show)
+        assert text.startswith('---\n')
+        fm = yaml.safe_load(text.split('---')[1])
+        assert fm['type'] == 'analysis-report'
+        assert fm['module'] == MODULE
+        assert fm['entryCount'] == 4
+
+    def test_frontmatter_records_the_model(self, show):
+        fm = yaml.safe_load(self._text(show).split('---')[1])
+        assert fm['model'] == 'claude-opus-5'
+
+    def test_title_follows_frontmatter(self, show):
+        assert '\n# Immersive Design — show\n' in self._text(show)
