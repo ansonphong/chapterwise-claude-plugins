@@ -40,11 +40,20 @@ Point `--plugin-dir` at the **plugin** directory, not the repo root:
 claude --plugin-dir /path/to/chapterwise-plugins/plugins/chapterwise
 ```
 
+## Documentation
+
+**[Full command reference →](plugins/chapterwise/README.md)** — every command documented
+with arguments, workflow, outputs, and examples, plus the Codex format, the 33 analysis
+modules, and how to write your own.
+
 ## Commands
 
-24 slash commands. When the plugin is installed alongside others, use the namespaced
-form (`/chapterwise:import`) to avoid trigger collisions; the bare form works when
-there is no conflict.
+24 slash commands, summarized below. Each links to its full entry in the
+[command reference](plugins/chapterwise/README.md#command-reference).
+
+When the plugin is installed alongside others, use the namespaced form
+(`/chapterwise:import`) to avoid trigger collisions; the bare form works when there is
+no conflict.
 
 ### Core Pipeline
 
