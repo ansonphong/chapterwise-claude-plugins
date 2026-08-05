@@ -70,10 +70,26 @@ After implementing any plan:
 
 ## Recent Changes
 
+- **2026-08-04** — v2.4.0. Analysis granularity became depth in the codex tree rather than one pass per file. `--depth root,leaf` on a dome script gives a whole-show read plus all 36 beats, scoped into one `.analysis.json`. This made `immersive_design`'s scene-level output shape reachable — it shipped in v2.1.0 defining two shapes, but a dome script is one file containing its scenes, so the runner could never produce the scene half. Two new scripts: `codex_scan.py` (structure-first scan, so `/analysis` proposes with real numbers instead of asking blind) and `analysis_report.py` (deterministic markdown/codex reports into `<source_dir>/analysis/`, never calls a model). Fixed a data-loss bug: analysis history staled and trimmed a module's whole entry list, so 37 scoped writes kept 3 and deleted 34. Plan: `../../plans/plugins/analysis-resolution/`.
+
 - **2026-08-04** — v2.3.0. Documentation drift swept out of the command files, and one shipped-but-unreachable feature restored. The `immersive` course landed in `module_loader.py` in v2.1.0 but was never wired into `/analysis` — the picker offered four courses and the prose said four, so `immersive_design` could only be reached by naming it directly or via `--all`/`--plan`. It is now in the picker, `analysis list`, the `--plan` summary, and the language table. Also fixed: `/analysis` claimed 31 modules (33); `/pipeline` described `--skip-analysis` but omitted it from `argument-hint`; `/index` documented a `--scan` flag `index_generator.py` has never had; `/spreadsheet`, `/convert-to-markdown`, and `/format-regen-ids` were missing their `chapterwise:` triggers; `/research-deep` did not answer to its own filename. `plugins/chapterwise/README.md` went from a 40-line stub to the full command reference (all 24 commands with arguments, workflow, outputs, examples; plus format, modules, and custom-module authoring), and the redundant root `.claude-plugin/plugin.json` stub is gone.
 
 - **2026-08-04** — v2.2.0. Codex **V1.3** upgrade. The plugin had been emitting V1.2 while the published spec moved on. Schemas renamed to `*-v1.3.schema.json` and taught the V1.3 content array (`width`, `diagram`/`spreadsheet` types, extended `include` resolution for `.mermaid`/`.mmd`/`.csv`/`.xlsx`/`.spreadsheet.yaml`). `/format` now documents the content array — previously `width` and the new types existed only in `/diagram` and `/spreadsheet`, so the general formatter never emitted them. New `scripts/codex_version.py` is the single source of truth for the version; every stamping script imports it. Fixed: the auto-fixer silently downgraded V1.3 documents to 1.2 on every run, and `scrivener_file_writer.py` stamped the plugin's own version (`2.1`) as a codex `formatVersion`. Note: `.spreadsheet.yaml` keeps its own independent `formatVersion: "1.0"` — unrelated to the codex spec.
 - **2026-08-04** — v2.1.0. Added `immersive_design` module for dome shows and immersive experiences, backed by two new reference files (`immersive-effects.md`, 59 effects; `immersive-comfort.md`, vestibular thresholds and fulldome pacing). Renamed `gag_analysis` → `comedy_analysis`; the word "gag" is gone from the plugin, and the immersive unit is an "effect". New `immersive` course. Removed all billing vocabulary from `/atlas` — plugin users bring their own compute, so free/paid pass framing had no meaning here. Design spec: `../../plans/plugins/2026-08-04-immersive-design-module.md`.
+
+## Output Locations
+
+Where a generated file goes follows one rule — **input vs. output**, not hidden vs.
+readable:
+
+| Location | Contents |
+|---|---|
+| `.chapterwise/` | machine state and reference *inputs* — `*-recipe`, `research/`, `analysis-modules/` |
+| top-level, visible | deliverables derived *from* the manuscript — `atlas/`, `reader/`, `analysis/` |
+
+`research/` is readable and still hidden, because it is material consulted *while*
+writing. An analysis report is derived *from* the manuscript, so it is visible, committed,
+and handed to collaborators. Do not bury a deliverable in `.chapterwise/`.
 
 ## Vocabulary Guards
 

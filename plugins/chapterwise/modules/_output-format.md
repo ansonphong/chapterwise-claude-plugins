@@ -78,6 +78,30 @@ The `analysis_writer.py` script wraps your output in the full Codex V1.3 structu
    an unreported model is written as `unknown`, which is honest; a wrong model
    name is not. Alternatively pass `--model` to `analysis_writer.py`.
 
+## Scope
+
+A codex file can hold many analyzable nodes — a dome script is one file with 9
+acts and 36 beats inside. Each node analyzed gets its own entry in the same
+`.analysis.json`, distinguished by a `scope` attribute.
+
+| Attribute | Value | Notes |
+|---|---|---|
+| `scope` | `root` or `node:<id>` | absent means `root` — that is what pre-scope entries are |
+| `scopeName` | `Quantum Embryo` | display name |
+| `scopePath` | `Chrysalis › In The Void › Quantum Embryo` | disambiguates repeated names |
+| `scopeDepth` | `2` | depth in the source tree |
+| `scopeIndex` | `1` | document order, used to assemble reports |
+
+The command layer sets these via `--scope*` flags on `analysis_writer.py`. Each
+scope keeps its own history, so re-analyzing one beat leaves the others intact.
+
+**If your module defines more than one output shape, select it by scope.**
+`immersive_design` is the reference case: `root` produces the whole-show shape
+(arc map, motion budget, breath coverage, the landing), `node:*` produces the
+scene shape (effects in play, proposed effects, rhythm and breath, comfort and
+load). State the rule in your module's own Scope section — the runner follows
+whatever the module says.
+
 ## Important Notes
 
 - Module IDs MUST use snake_case: `plot_holes`, NOT `plot-holes`

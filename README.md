@@ -354,7 +354,7 @@ Pick this when you know the source is a `.scriv` bundle. Pick `/import` for anyt
 
 ```
 /analysis                              # interactive course picker
-/analysis <module> [file]              # one module, one chapter
+/analysis <module> [file]              # one module, one manuscript
 /analysis list                         # every module, grouped by course
 /analysis help <module>                # what a module does
 /analysis --plan                       # genre-aware recommendations
@@ -364,16 +364,84 @@ Pick this when you know the source is a `.scriv` bundle. Pick `/import` for anyt
 
 | Flag | Effect |
 |---|---|
-| `--force` | Ignore freshness, re-run even where results exist |
+| `--depth root\|N\|leaf\|auto\|all` | Resolution — which nodes get their own pass. Comma lists allowed. Default `auto` |
+| `--report[=markdown\|codex]` | Export a readable report. Default `markdown` |
+| `--no-report` | Analyze only, no export |
+| `--report-only` | Re-render a report from stored results — runs no analysis |
+| `--force` | Ignore freshness, re-run, overwrite an existing report |
 | `--dry-run` | Show what would run, write nothing |
 | `--glob <pattern>` | Target files by glob |
 | `--node <node_id>` | With `--all`, target the file with that node ID in the index |
 
-**How it works.** Each module is a prompt — a specific editorial lens. Run with no arguments and you get a multi-select course picker. Results are written to `{chapter}.analysis.json` beside each chapter, keeping up to three historical entries per module (newest first; older ones demoted to `draft`). Your manuscript files are never modified.
+**How it works.** Each module is a prompt — a specific editorial lens.
+
+Analysis **reads your manuscript's structure before it asks you anything**, then proposes
+a plan with the numbers that justify it, which you accept in one keystroke:
+
+> Chrysalis — 9 acts, 36 beats, 36:00, Planetarium Dome Show.
+> Suggest whole-show plus beat-by-beat: 37 passes. Report as markdown.
+
+Any flag you pass suppresses its question, so the command stays scriptable.
+
+Results are written to `{manuscript}.analysis.json` beside the source, keeping up to
+three historical entries per module *per scope*. Your manuscript files are never
+modified.
+
+##### Resolution
+
+A codex is a tree, and **resolution picks which nodes get their own analysis pass**. This
+matters when one file contains many analyzable units — a dome script holding 9 acts and
+36 beats, a collection of short stories, a screenplay of scenes:
+
+| `--depth` | Passes on a 36-beat script | Meaning |
+|---|---:|---|
+| `root` | 1 | the whole work |
+| `1` | 9 | act by act |
+| `leaf` | 36 | beat by beat |
+| `root,leaf` | 37 | whole-work synthesis **and** every beat |
+
+Every result lands in the same `.analysis.json`, tagged with a `scope` (`root` or
+`node:<id>`). Each scope keeps its own history, so re-analyzing one beat leaves the other
+35 untouched. Entries written before scopes existed read as `root`, so older analysis
+files keep working unchanged.
+
+Modules that define more than one output shape select by scope — `immersive_design`
+gives a whole-show read at `root` (arc map, motion budget, breath coverage, the landing)
+and a scene read at each node (effects in play, proposed effects, rhythm and breath,
+comfort and load).
+
+##### Exported reports
+
+`.analysis.json` is a machine record. For something to read, print, or hand to a
+collaborator, export a report:
+
+```
+/analysis immersive_design show.codex.yaml --depth root,leaf --report=markdown
+```
+
+Reports land in an `analysis/` folder beside the source, next to `atlas/` and `reader/`:
+
+```
+Chrysalis/
+├── Chrysalis - Dome Show Script.codex.yaml
+├── Chrysalis - Dome Show Script.analysis.json      ← machine record
+└── analysis/
+    └── chrysalis-dome-show-script-immersive-design-2026-08-04.md
+```
+
+Markdown or Codex, your choice at runtime. The report is assembled **deterministically
+from the stored results** — it never calls a model, so regenerating costs nothing and it
+cannot drift from what was actually analyzed. It re-reads the source to emit in document
+order, so the report reads in show order rather than the order things happened to be
+written. `--report-only` regenerates or switches format without re-analyzing anything.
 
 Structural modules in the Slow roast course (three-act, story beats, pacing, hero's journey) run once against the whole manuscript. Everything else runs per chapter.
 
 Before any batch, freshness is aggregated and reported once — you're asked whether to re-analyze only stale chapters or everything, rather than being prompted per file.
+
+**Provenance.** Every entry records the model that actually produced it. A model that
+doesn't report itself is recorded as `unknown` — an honest blank rather than a plausible
+wrong name.
 
 **Examples**
 
@@ -386,6 +454,16 @@ Before any batch, freshness is aggregated and reported once — you're asked whe
 /analysis characters chapter-03.codex.yaml
 ```
 > One lens, one chapter. Checks freshness first, writes `chapter-03.analysis.json`.
+
+```
+/analysis immersive_design "Dome Show.codex.yaml" --depth root,leaf --report
+```
+> Whole-show read plus every beat — 37 passes into one `.analysis.json`, then a markdown report in `analysis/`.
+
+```
+/analysis immersive_design "Dome Show.codex.yaml" --report-only --report=codex
+```
+> Re-renders the existing results as Codex. No analysis, no cost.
 
 ```
 /analysis --all --glob "chapters/*.codex.yaml"
@@ -1431,7 +1509,8 @@ Results are written beside the source chapter, in Codex V1.3:
             { "key": "model", "value": "<the model that actually ran>" },
             { "key": "sourceHash", "value": "a1b2c3d4e5f6a7b8" },
             { "key": "analysisStatus", "value": "current" },
-            { "key": "timestamp", "value": "2026-08-04T14:22:33Z" }
+            { "key": "timestamp", "value": "2026-08-04T14:22:33Z" },
+            { "key": "scope", "value": "root" }
           ],
           "summary": "Elena's reticence reads as grief, not coldness.",
           "body": "## Character Analysis\n\n...",
@@ -1444,7 +1523,25 @@ Results are written beside the source chapter, in Codex V1.3:
 }
 ```
 
-Each module keeps up to three entries, newest first; older ones drop to `status: draft`. The `sourceHash` is what makes staleness detection work. Authoritative schema: `schemas/analysis-v1.3.schema.json`.
+Each module keeps up to three entries **per scope**, newest first; older ones drop to `status: draft`. The `sourceHash` is what makes staleness detection work. Authoritative schema: `schemas/analysis-v1.3.schema.json`.
+
+**Scope** is what lets one file hold many analyses. A whole-file pass is `root`; a pass over a node inside the file is `node:<id>`, alongside `scopeName`, `scopePath`, `scopeDepth`, and `scopeIndex`:
+
+```json
+{
+  "id": "entry-20260804T142233Z-node6de250b7",
+  "type": "analysis-entry",
+  "attributes": [
+    { "key": "scope", "value": "node:6de250b7-0bf0-474c-8bc7-9b5640dbfb40" },
+    { "key": "scopeName", "value": "Quantum Embryo" },
+    { "key": "scopePath", "value": "Chrysalis › In The Void › Quantum Embryo" },
+    { "key": "scopeDepth", "value": 2 },
+    { "key": "scopeIndex", "value": 1 }
+  ]
+}
+```
+
+An entry with no `scope` attribute is read as `root` — which is exactly what entries written before scopes existed are, so older analysis files keep working untouched. History is kept per scope, so a 36-beat script holds 37 current entries rather than collapsing to the newest three.
 
 ### Writing your own module
 

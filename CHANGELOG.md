@@ -96,6 +96,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `chapterwise-web`'s generator. That value is unrelated to the codex spec version and was
 deliberately left alone.
 
+## [2.4.0] - 2026-08-04
+
+### Added
+
+- **Analysis resolution.** Granularity is now depth in the codex tree rather than one
+  pass per file. `--depth` takes `root`, an integer, `leaf`, `auto`, `all`, or a comma
+  list — `--depth root,leaf` gives a whole-work synthesis *and* a pass over every leaf.
+  A dome script holding 9 acts and 36 beats yields 37 analyses instead of 1.
+- **Scoped entries.** Results carry a `scope` (`root` or `node:<id>`) plus `scopeName`,
+  `scopePath`, `scopeDepth` and `scopeIndex`, and all live in the same `.analysis.json`
+  sibling. No new file paths, so `chapterwise-web`, `chapterwise-app` and
+  `staleness_checker` need no changes. An entry with no `scope` reads as `root`.
+- **`scripts/codex_scan.py`** — structural scan (`scan`) and node resolution (`nodes`).
+  `/analysis` now reads a manuscript's shape *before* asking anything, and proposes with
+  the numbers that justify it. Structure only, so it stays cheap on long manuscripts.
+- **`scripts/analysis_report.py`** — exports readable reports to `<source_dir>/analysis/`
+  in markdown or Codex V1.3. A formatter, not an analyst: it never calls a model, so
+  regenerating is free and the report cannot drift from the stored results. It walks the
+  source tree to emit in document order. `--report-only` re-renders or switches format
+  without re-analyzing.
+- Report and depth choices persist to `analysis-recipe` — asked once, not every run.
+
+### Changed
+
+- `/analysis` proposes rather than interrogates. One question with the recommendation
+  preselected, and any flag suppresses its own question so the command stays scriptable.
+- Analysis history is kept **per scope**.
+- Entry ids gained a scope suffix; the analysis schema already permitted one.
+- `analysis/` documented as a deliverable folder alongside `atlas/` and `reader/`, as
+  against `.chapterwise/` for machine state and reference inputs.
+
+### Fixed
+
+- **Analysis history no longer destroys scoped results.** `add_analysis_result()` marked
+  every entry in a module stale and trimmed the list to three. That was correct when a
+  module held one analysis per file, but writing 37 scoped entries through it kept 3 and
+  deleted 34 — it treated other nodes' analyses as older versions of the one being
+  written. Staling and trimming now partition by scope.
+- **`immersive_design`'s scene-level output shape is reachable.** It shipped in v2.1.0
+  defining two shapes, whole-show and scene, but the runner only ever analyzed whole
+  files — so for a dome script, which is one file containing its scenes, the scene shape
+  could not be produced. Modules with multiple shapes now select by scope.
+- **Analysis entries record the model that actually ran.** `analysis_writer.py` defaulted
+  to `claude-sonnet-4` and its CLI could not pass anything else, so every `.analysis.json`
+  the plugin had written carried that stamp regardless of what produced it. Resolution is
+  now `--model` → payload `model` key → `CHAPTERWISE_ANALYSIS_MODEL` → `unknown`. No
+  concrete model name is a fallback: an unreported model writes `unknown`, which is
+  honest, where a plausible wrong name is not.
+- Entry ids collided when many entries were written inside the same second — timestamps
+  are second-resolution and a scoped run writes dozens.
+
 ## [2.1.0] - 2026-08-04
 
 ### Added
