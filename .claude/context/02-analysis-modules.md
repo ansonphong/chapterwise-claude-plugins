@@ -100,8 +100,9 @@ twice. Settings are intent and are committed; the `*-recipe` folders are run his
 `commands/analysis.md` Section 0 is the shared contract every route defers to — resolve
 before asking, export a report on every route, offer to save once per project. Wiring it
 into the single-file route alone was the v2.6.0 gap.
-`report_dir` resolves like a codex `include`: bare or `./` is beside the file, a leading
-`/` is the project root, `~` is literal.
+`output_dir` resolves like a codex `include`: bare or `./` is relative to the section's
+base, a leading `/` is the project root, `.chapterwise/…` is always the project's
+`.chapterwise/`, `~` is literal.
 
 **Codex output goes through `/chapterwise:format`.** `render_codex()` hands the assembled
 document to `CodexAutoFixer`, then `validate_output()` checks it against the V1.3 schema

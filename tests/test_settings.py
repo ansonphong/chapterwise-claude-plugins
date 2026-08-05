@@ -26,7 +26,7 @@ from settings import (  # noqa: E402
     action_set,
     find_project_root,
     load,
-    resolve_report_dir,
+    resolve_file_dir,
     validate,
 )
 
@@ -89,23 +89,23 @@ class TestProjectRoot:
 class TestReportDir:
     def test_relative_lands_beside_the_analyzed_file(self, project):
         _root, src = project
-        assert resolve_report_dir(src, 'analysis') == src.parent / 'analysis'
+        assert resolve_file_dir(src, 'analysis') == src.parent / 'analysis'
 
     def test_dot_slash_is_the_same_thing(self, project):
         _root, src = project
-        assert resolve_report_dir(src, './reports') == src.parent / 'reports'
+        assert resolve_file_dir(src, './reports') == src.parent / 'reports'
 
     def test_leading_slash_means_project_root_not_filesystem_root(self, project):
         root, src = project
-        assert resolve_report_dir(src, '/reports') == root / 'reports'
+        assert resolve_file_dir(src, '/reports') == root / 'reports'
 
     def test_tilde_is_a_literal_path(self, project):
         _root, src = project
-        assert resolve_report_dir(src, '~/somewhere') == Path.home() / 'somewhere'
+        assert resolve_file_dir(src, '~/somewhere') == Path.home() / 'somewhere'
 
     def test_empty_falls_back_to_the_default(self, project):
         _root, src = project
-        assert resolve_report_dir(src, '') == src.parent / 'analysis'
+        assert resolve_file_dir(src, '') == src.parent / 'analysis'
 
 
 class TestReadingWhatIsWritten:

@@ -510,7 +510,7 @@ collaborator, export a report:
 ```
 
 Reports land in an `analysis/` folder beside the source, next to `atlas/` and `reader/` —
-`analysis.report_dir` in [settings](#settings) moves them:
+`analysis.output_dir` in [settings](#settings) moves them:
 
 ```
 Chrysalis/

@@ -246,9 +246,9 @@ def _migrate_legacy_keys(settings: Dict[str, Any]) -> Dict[str, Any]:
     return settings
 
 
-def resolve_report_dir(source: Path, report_dir: str) -> Path:
+def resolve_file_dir(source: Path, output_dir: str) -> Path:
     """
-    Where a report for `source` belongs.
+    Where output belonging to one file goes — an analysis report.
 
     Three forms, matching how codex `include` paths already resolve so there is
     one rule to learn rather than two:
@@ -260,7 +260,7 @@ def resolve_report_dir(source: Path, report_dir: str) -> Path:
     A leading `/` means the project root, not the filesystem root — same as an
     `include`. Use `~` when you genuinely mean somewhere else on the machine.
     """
-    raw = str(report_dir or DEFAULTS['analysis']['output_dir']).strip()
+    raw = str(output_dir or DEFAULTS['analysis']['output_dir']).strip()
     return _resolve(source, raw, 'file')
 
 
@@ -268,7 +268,7 @@ def resolve_project_dir(path: Path, output_dir: str, default: str = '') -> Path:
     """
     Where a whole-project artifact belongs — an atlas, a reader.
 
-    Same three forms as `resolve_report_dir`, except a bare name is relative to
+    Same forms as `resolve_file_dir`, except a bare name is relative to
     the project root rather than to any one file, because these are built once
     for the project rather than per manuscript.
     """
@@ -354,7 +354,7 @@ def action_resolve(data: Dict[str, Any]) -> Dict[str, Any]:
     values = dict(effective.get(section, {}))
 
     dir_key, relative_to = OUTPUT_DIRS[section]
-    resolver = resolve_report_dir if relative_to == 'file' else resolve_project_dir
+    resolver = resolve_file_dir if relative_to == 'file' else resolve_project_dir
     values[dir_key] = str(resolver(source, values.get(dir_key)))
 
     return {
