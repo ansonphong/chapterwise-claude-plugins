@@ -81,7 +81,9 @@ echo '{"path": ".", "updates": {"reader": {"theme": "dark"}}}' | python3 ${CLAUD
 `sources` map marking each value `settings`, `recipe`, or `default`.
 
 **Every section has an `output_dir`, and it resolves identically everywhere** — bare and
-`./` are relative, a leading `/` is the **project root**, `~` is a literal path. What
+`./` are relative, a leading `/` is the **project root**, a path starting `.chapterwise/`
+is the **project's** `.chapterwise/` whatever the section's base, and `~` is a literal
+path. What
 "relative" means follows from what the artifact belongs to: an analysis report describes
 one manuscript and sits beside it; an atlas, a reader and research belong to the project.
 

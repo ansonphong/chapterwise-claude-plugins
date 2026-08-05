@@ -309,8 +309,9 @@ sections the same way.
 
 | Value | Resolves to |
 |---|---|
-| `analysis`, `./analysis` | beside the analyzed file — the default |
+| `analysis`, `./analysis` | relative to the section's base — the default |
 | `/reports` | from the **project root**, not the filesystem root |
+| `.chapterwise/reports` | the **project's** `.chapterwise/`, in every section |
 | `~/Documents/reports` | a literal path on your machine |
 
 Edit the file by hand, or let the command write it. Commit it — it is a statement about

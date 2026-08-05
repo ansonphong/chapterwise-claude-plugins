@@ -281,6 +281,12 @@ def _resolve(path: Path, raw: str, relative_to: str) -> Path:
         return Path(os.path.expanduser(raw))
     if raw.startswith('/'):
         return find_project_root(path) / raw.lstrip('/')
+    # `.chapterwise/` is the project's marker folder by definition, so a path
+    # into it means the project's — in every section. Without this, hiding a
+    # per-file artifact with the same string a per-project one uses would
+    # quietly create a second `.chapterwise/` beside the manuscript.
+    if raw == SETTINGS_DIR or raw.startswith(SETTINGS_DIR + '/'):
+        return find_project_root(path) / raw
     if raw.startswith('./'):
         raw = raw[2:]
     if relative_to == 'project':

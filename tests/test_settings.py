@@ -628,3 +628,35 @@ class TestOnePatternForOutput:
         write_settings(root, {'version': 1, 'analysis': {'output_dir': '/out'}})
         result = build({'source': str(src), 'module': 'summary', 'generated': '2026-08-05'})
         assert Path(result['path']).parent == root / 'out'
+
+
+class TestHidingMeansTheSamePlaceEverywhere:
+    """
+    `.chapterwise/x` is the project's `.chapterwise/x`, whatever the section.
+
+    Analysis output is file-relative, so the literal rule would put
+    `.chapterwise/reports` *inside the chapter folder* — a second marker folder
+    beside the manuscript, from the same string that means the project's
+    `.chapterwise/` in every other section. One pattern has to mean one place.
+    """
+
+    def test_hiding_analysis_uses_the_projects_chapterwise(self, project):
+        root, src = project
+        write_settings(root, {'version': 1,
+                              'analysis': {'output_dir': '.chapterwise/reports'}})
+        result = action_resolve({'source': str(src)})
+        assert result['output_dir'] == str(root / '.chapterwise' / 'reports')
+        assert '.chapterwise' not in str(src.parent.relative_to(root))
+
+    def test_the_same_string_means_the_same_place_in_every_section(self, project):
+        root, src = project
+        for section in ('analysis', 'atlas', 'reader', 'research'):
+            write_settings(root, {'version': 1,
+                                  section: {'output_dir': '.chapterwise/out'}})
+            result = action_resolve({'source': str(src), 'section': section})
+            assert result['output_dir'] == str(root / '.chapterwise' / 'out'), section
+
+    def test_a_plain_relative_path_is_still_file_relative_for_analysis(self, project):
+        root, src = project
+        write_settings(root, {'version': 1, 'analysis': {'output_dir': 'notes'}})
+        assert action_resolve({'source': str(src)})['output_dir'] == str(src.parent / 'notes')

@@ -77,9 +77,10 @@ Resolution, lowest to highest: **plugin defaults → `.chapterwise/settings.json
 Defaults are codex reports into an `analysis/` folder beside the analyzed file.
 
 `output_dir` resolves the way codex `include` paths do — `analysis` and `./analysis` sit
-beside the manuscript, `/reports` is from the project root, `~/…` is a literal path. Every
-section uses this same key and these same rules; put reports under `.chapterwise/analysis`
-if you would rather they were not visible.
+beside the manuscript, `/reports` is from the project root, `~/…` is a literal path, and
+`.chapterwise/…` is the project's `.chapterwise/`. Every section uses this same key and
+these same rules; set `.chapterwise/analysis` if you would rather reports were not
+visible.
 
 Settings are *intent* and are committed. The `*-recipe` folders beside them are *history*
 — what a command last did. Settings-shaped keys left in an older recipe are honoured until

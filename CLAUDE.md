@@ -93,7 +93,7 @@ After implementing any plan:
 
 **Every command that writes output has an `output_dir` setting, and they all behave
 identically.** Same key, same path rules — bare and `./` relative, a leading `/` from the
-project root, `~` literal. The only thing that differs is what "relative" is relative to,
+project root, `.chapterwise/…` always the project's `.chapterwise/`, `~` literal. The only thing that differs is what "relative" is relative to,
 and that follows from what the artifact belongs to: an analysis report describes one
 manuscript and sits beside it; an atlas, a reader and research belong to the project.
 
