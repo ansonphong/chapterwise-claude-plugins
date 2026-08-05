@@ -4,137 +4,14 @@
   "title": "Codex V1.3",
   "description": "ChapterWise Codex format specification v1.3 - A recursive, self-describing document format for structured creative content. Accepts documents declaring formatVersion 1.0 through 1.3.",
   "type": "object",
-
-  "properties": {
-    "metadata": {
-      "$ref": "#/$defs/metadata"
-    },
-    "id": {
-      "type": "string",
-      "description": "Unique identifier (UUID v4 or simple slug)",
-      "pattern": "^[a-zA-Z0-9_-]+$|^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-    },
-    "type": {
-      "type": "string",
-      "description": "Node type (user-defined: chapter, character, location, recipe, etc.)",
-      "minLength": 1
-    },
-    "name": {
-      "type": "string",
-      "description": "Display name"
-    },
-    "title": {
-      "type": "string",
-      "description": "Alternative title (fallback for name)"
-    },
-    "summary": {
-      "type": "string",
-      "description": "Brief one-line description"
-    },
-    "description": {
-      "type": "string",
-      "description": "Detailed description"
-    },
-    "body": {
-      "type": "string",
-      "description": "Main prose content (markdown supported)"
-    },
-    "status": {
-      "type": "string",
-      "enum": ["draft", "published", "private", "archived"],
-      "description": "Publishing status"
-    },
-    "featured": {
-      "type": "boolean",
-      "description": "Whether this node is featured/highlighted"
-    },
-    "attributes": {
-      "type": "array",
-      "description": "Structured key-value metadata",
-      "items": {
-        "$ref": "#/$defs/attribute"
-      }
-    },
-    "tags": {
-      "type": "array",
-      "description": "Searchable tags",
-      "items": {
-        "oneOf": [
-          { "type": "string" },
-          { "$ref": "#/$defs/detailedTag" }
-        ]
-      }
-    },
-    "relations": {
-      "type": "array",
-      "description": "Cross-references to other nodes",
-      "items": {
-        "$ref": "#/$defs/relation"
-      }
-    },
-    "content": {
-      "oneOf": [
-        { "type": "string", "description": "Alternative prose field" },
-        {
-          "type": "array",
-          "description": "Structured content sections",
-          "items": {
-            "$ref": "#/$defs/contentSection"
-          }
-        }
-      ]
-    },
-    "children": {
-      "type": "array",
-      "description": "Child nodes (recursive structure)",
-      "items": {
-        "oneOf": [
-          { "$ref": "#" },
-          { "$ref": "#/$defs/includeDirective" }
-        ]
-      }
-    },
-    "include": {
-      "type": "string",
-      "description": "Path to external codex file to include",
-      "pattern": "^(\\.{0,2}/|/).+\\.(codex\\.)?(yaml|yml|json|md)$"
-    },
-    "image": {
-      "type": "string",
-      "description": "Single image URL or path"
-    },
-    "images": {
-      "type": "array",
-      "description": "Image gallery",
-      "items": {
-        "$ref": "#/$defs/image"
-      }
-    },
-    "external_url": {
-      "type": "string",
-      "format": "uri",
-      "description": "External reference URL"
-    },
-    "color": {
-      "type": "string",
-      "description": "UI color identifier for visual organization"
-    },
-    "key": {
-      "type": "string",
-      "description": "Machine-readable key for this node"
-    },
-    "animation_url": {
-      "type": "string",
-      "description": "URL to an animation or video asset"
-    },
-    "display": {
-      "type": "object",
-      "description": "Visual presentation cascade settings"
+  "allOf": [
+    {
+      "$ref": "#/$defs/node"
     }
-  },
-
-  "required": ["metadata"],
-
+  ],
+  "required": [
+    "metadata"
+  ],
   "$defs": {
     "metadata": {
       "type": "object",
@@ -142,7 +19,12 @@
       "properties": {
         "formatVersion": {
           "type": "string",
-          "enum": ["1.0", "1.1", "1.2", "1.3"],
+          "enum": [
+            "1.0",
+            "1.1",
+            "1.2",
+            "1.3"
+          ],
           "description": "Codex format version. Current spec is 1.3; earlier versions remain valid."
         },
         "documentVersion": {
@@ -162,8 +44,15 @@
         },
         "author": {
           "oneOf": [
-            { "type": "string" },
-            { "type": "array", "items": { "type": "string" } }
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
           ],
           "description": "Author name(s)"
         },
@@ -173,18 +62,25 @@
         },
         "tags": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Document-level tags"
         },
         "iconset": {
           "type": "string",
-          "enum": ["phosphor", "fontawesome", "lucide"],
+          "enum": [
+            "phosphor",
+            "fontawesome",
+            "lucide"
+          ],
           "description": "Icon family used when rendering this document"
         }
       },
-      "required": ["formatVersion"]
+      "required": [
+        "formatVersion"
+      ]
     },
-
     "attribute": {
       "type": "object",
       "description": "Structured key-value attribute",
@@ -203,7 +99,17 @@
         },
         "dataType": {
           "type": "string",
-          "enum": ["string", "int", "float", "boolean", "date", "url", "markdown", "stringArray", "object"],
+          "enum": [
+            "string",
+            "int",
+            "float",
+            "boolean",
+            "date",
+            "url",
+            "markdown",
+            "stringArray",
+            "object"
+          ],
           "description": "Value type hint for rendering"
         },
         "id": {
@@ -215,9 +121,11 @@
           "description": "Optional attribute type"
         }
       },
-      "required": ["key", "value"]
+      "required": [
+        "key",
+        "value"
+      ]
     },
-
     "detailedTag": {
       "type": "object",
       "description": "Tag with metadata",
@@ -231,9 +139,10 @@
           "description": "Occurrence count"
         }
       },
-      "required": ["name"]
+      "required": [
+        "name"
+      ]
     },
-
     "relation": {
       "type": "object",
       "description": "Cross-reference to another node",
@@ -265,9 +174,10 @@
           "description": "Relation details"
         }
       },
-      "required": ["targetId"]
+      "required": [
+        "targetId"
+      ]
     },
-
     "contentSection": {
       "type": "object",
       "description": "Structured content section",
@@ -301,7 +211,11 @@
         },
         "width": {
           "type": "string",
-          "enum": ["1/1", "1/2", "1/3"],
+          "enum": [
+            "1/1",
+            "1/2",
+            "1/3"
+          ],
           "description": "V1.3 flex layout width. Items flow left-to-right and wrap. Defaults to 1/2."
         },
         "include": {
@@ -311,11 +225,12 @@
         },
         "attributes": {
           "type": "array",
-          "items": { "$ref": "#/$defs/attribute" }
+          "items": {
+            "$ref": "#/$defs/attribute"
+          }
         }
       }
     },
-
     "includeDirective": {
       "type": "object",
       "description": "Reference to an external file. V1.3 extends resolution beyond codex documents to diagram (.mermaid, .mmd) and spreadsheet (.csv, .xlsx, .spreadsheet.yaml) sources.",
@@ -326,9 +241,10 @@
           "pattern": "^(\\.{0,2}/|/).+\\.(codex\\.|spreadsheet\\.)?(yaml|yml|json|md|mermaid|mmd|csv|xlsx)$"
         }
       },
-      "required": ["include"]
+      "required": [
+        "include"
+      ]
     },
-
     "image": {
       "type": "object",
       "description": "Image with metadata",
@@ -346,10 +262,158 @@
           "description": "Alt text for accessibility"
         }
       },
-      "required": ["url"]
+      "required": [
+        "url"
+      ]
+    },
+    "node": {
+      "type": "object",
+      "description": "A codex node. Identical to the document root except that metadata is optional — only the root document declares it.",
+      "properties": {
+        "metadata": {
+          "$ref": "#/$defs/metadata"
+        },
+        "id": {
+          "type": "string",
+          "description": "Unique identifier (UUID v4 or simple slug)",
+          "pattern": "^[a-zA-Z0-9_-]+$|^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+        },
+        "type": {
+          "type": "string",
+          "description": "Node type (user-defined: chapter, character, location, recipe, etc.)",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name"
+        },
+        "title": {
+          "type": "string",
+          "description": "Alternative title (fallback for name)"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Brief one-line description"
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description"
+        },
+        "body": {
+          "type": "string",
+          "description": "Main prose content (markdown supported)"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "published",
+            "private",
+            "archived"
+          ],
+          "description": "Publishing status"
+        },
+        "featured": {
+          "type": "boolean",
+          "description": "Whether this node is featured/highlighted"
+        },
+        "attributes": {
+          "type": "array",
+          "description": "Structured key-value metadata",
+          "items": {
+            "$ref": "#/$defs/attribute"
+          }
+        },
+        "tags": {
+          "type": "array",
+          "description": "Searchable tags",
+          "items": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/$defs/detailedTag"
+              }
+            ]
+          }
+        },
+        "relations": {
+          "type": "array",
+          "description": "Cross-references to other nodes",
+          "items": {
+            "$ref": "#/$defs/relation"
+          }
+        },
+        "content": {
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "Alternative prose field"
+            },
+            {
+              "type": "array",
+              "description": "Structured content sections",
+              "items": {
+                "$ref": "#/$defs/contentSection"
+              }
+            }
+          ]
+        },
+        "children": {
+          "type": "array",
+          "description": "Child nodes (recursive structure)",
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/node"
+              },
+              {
+                "$ref": "#/$defs/includeDirective"
+              }
+            ]
+          }
+        },
+        "include": {
+          "type": "string",
+          "description": "Path to external codex file to include",
+          "pattern": "^(\\.{0,2}/|/).+\\.(codex\\.)?(yaml|yml|json|md)$"
+        },
+        "image": {
+          "type": "string",
+          "description": "Single image URL or path"
+        },
+        "images": {
+          "type": "array",
+          "description": "Image gallery",
+          "items": {
+            "$ref": "#/$defs/image"
+          }
+        },
+        "external_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "External reference URL"
+        },
+        "color": {
+          "type": "string",
+          "description": "UI color identifier for visual organization"
+        },
+        "key": {
+          "type": "string",
+          "description": "Machine-readable key for this node"
+        },
+        "animation_url": {
+          "type": "string",
+          "description": "URL to an animation or video asset"
+        },
+        "display": {
+          "type": "object",
+          "description": "Visual presentation cascade settings"
+        }
+      }
     }
   },
-
   "examples": [
     {
       "metadata": {
@@ -364,25 +428,65 @@
       "summary": "A tale of courage and discovery",
       "status": "draft",
       "attributes": [
-        { "key": "genre", "value": "fantasy", "dataType": "string" },
-        { "key": "word_count", "value": 85000, "dataType": "int" }
+        {
+          "key": "genre",
+          "value": "fantasy",
+          "dataType": "string"
+        },
+        {
+          "key": "word_count",
+          "value": 85000,
+          "dataType": "int"
+        }
       ],
-      "tags": ["fantasy", "adventure", "coming-of-age"],
+      "tags": [
+        "fantasy",
+        "adventure",
+        "coming-of-age"
+      ],
       "content": [
-        { "key": "logline", "name": "Logline", "width": "1/2", "value": "A cartographer's daughter inherits a map of a country that does not exist." },
-        { "key": "themes", "name": "Themes", "width": "1/2", "value": "Inheritance, exile, the cost of knowing." },
-        { "key": "arc-flow", "name": "Story Structure", "type": "diagram", "width": "1/1", "include": "./diagrams/three-act.mermaid" },
-        { "key": "chapter-budget", "name": "Word Budget", "type": "spreadsheet", "width": "1/1", "include": "./data/chapter-budget.csv" }
+        {
+          "key": "logline",
+          "name": "Logline",
+          "width": "1/2",
+          "value": "A cartographer's daughter inherits a map of a country that does not exist."
+        },
+        {
+          "key": "themes",
+          "name": "Themes",
+          "width": "1/2",
+          "value": "Inheritance, exile, the cost of knowing."
+        },
+        {
+          "key": "arc-flow",
+          "name": "Story Structure",
+          "type": "diagram",
+          "width": "1/1",
+          "include": "./diagrams/three-act.mermaid"
+        },
+        {
+          "key": "chapter-budget",
+          "name": "Word Budget",
+          "type": "spreadsheet",
+          "width": "1/1",
+          "include": "./data/chapter-budget.csv"
+        }
       ],
       "children": [
         {
-          "metadata": { "formatVersion": "1.3" },
+          "metadata": {
+            "formatVersion": "1.3"
+          },
           "id": "chapter-1",
           "type": "chapter",
           "name": "The Beginning",
           "body": "It was a dark and stormy night when Elena first discovered the ancient map...",
           "attributes": [
-            { "key": "word_count", "value": 3500, "dataType": "int" }
+            {
+              "key": "word_count",
+              "value": 3500,
+              "dataType": "int"
+            }
           ]
         },
         {

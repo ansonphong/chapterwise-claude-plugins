@@ -6,7 +6,14 @@ from pathlib import Path
 
 # Add scripts to path
 sys.path.insert(0, str(Path(__file__).parent.parent / 'plugins' / 'chapterwise' / 'scripts'))
-from schema_validator import SchemaValidator, validate_codex, validate_analysis
+from datetime import date, datetime  # noqa: E402
+
+from schema_validator import (  # noqa: E402
+    SchemaValidator,
+    normalize_dates,
+    validate_analysis,
+    validate_codex,
+)
 
 
 class TestSchemaValidator:
@@ -151,3 +158,66 @@ class TestAutoFixerValidation:
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
+
+
+class TestRecursiveChildren:
+    """
+    Children are nodes, and only the document root declares metadata.
+
+    The schema used to recurse into `$ref: "#"`, which carries the root's
+    `required: [metadata]`. That made every nested document invalid — which is
+    why no generator validated its own output: doing so would have failed on
+    everything.
+    """
+
+    def _doc(self):
+        return {
+            'metadata': {'formatVersion': '1.3'},
+            'id': 'book', 'type': 'book', 'name': 'Book',
+            'children': [
+                {'id': 'ch1', 'type': 'chapter', 'name': 'One',
+                 'children': [{'id': 's1', 'type': 'scene', 'name': 'Scene'}]},
+            ],
+        }
+
+    def test_a_nested_document_validates(self):
+        is_valid, errors = validate_codex(self._doc())
+        assert is_valid, errors
+
+    def test_the_root_still_requires_metadata(self):
+        doc = self._doc()
+        del doc['metadata']
+        assert not validate_codex(doc)[0]
+
+    def test_a_child_may_carry_its_own_metadata(self):
+        doc = self._doc()
+        doc['children'][0]['metadata'] = {'formatVersion': '1.3'}
+        assert validate_codex(doc)[0]
+
+    def test_an_include_directive_is_still_a_valid_child(self):
+        doc = self._doc()
+        doc['children'].append({'include': './chapters/two.codex.yaml'})
+        assert validate_codex(doc)[0]
+
+    def test_a_broken_grandchild_is_still_caught(self):
+        doc = self._doc()
+        doc['children'][0]['children'][0]['attributes'] = [{'key': 'badKey', 'value': 1}]
+        is_valid, errors = validate_codex(doc)
+        assert not is_valid
+        assert 'children.0.children.0.attributes.0.key' in errors[0], errors
+
+
+class TestYamlTimestamps:
+    """PyYAML resolves unquoted dates to date objects; the spec says string."""
+
+    def test_a_datetime_in_metadata_does_not_fail_validation(self):
+        import yaml
+        doc = yaml.safe_load(
+            'metadata:\n  formatVersion: "1.3"\n  created: 2025-01-26\n'
+            'id: b\ntype: book\nname: B\n')
+        assert isinstance(doc['metadata']['created'], (datetime, date))
+        assert validate_codex(doc)[0]
+
+    def test_normalize_dates_leaves_everything_else_alone(self):
+        payload = {'a': [1, 'x', {'b': None}]}
+        assert normalize_dates(payload) == payload

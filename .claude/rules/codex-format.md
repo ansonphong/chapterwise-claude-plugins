@@ -40,6 +40,16 @@ Content in standard Markdown...
 - Schema files live in `schemas/` (codex-v1.3.schema.json, analysis-v1.3.schema.json, research-v1.3.schema.json)
 - Silent on success — only report auto-fixes and unfixable issues
 
+**A generator that emits codex must go through the format machinery, not imitate it.**
+Import `CodexAutoFixer` from `auto_fixer.py` — the engine behind `/chapterwise:format` —
+hand it the assembled document, and validate the result with
+`schema_validator.validate_codex`. `analysis_report.py:render_codex` is the reference
+implementation. Two rules the fixer enforces that hand-written emitters get wrong:
+
+- **Attribute keys are lowercase**, `^[a-z][a-z0-9_-]*$`. `source_file`, never `sourceFile`.
+- **Node ids must be v4-shaped.** Anything else is treated as broken and replaced, which
+  silently breaks deterministic output. See `analysis_report.stable_id`.
+
 ## Schema Resolution
 
 Schema files are at the **repository root** in `schemas/`:

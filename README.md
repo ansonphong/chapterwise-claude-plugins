@@ -365,7 +365,7 @@ Pick this when you know the source is a `.scriv` bundle. Pick `/import` for anyt
 | Flag | Effect |
 |---|---|
 | `--depth root\|N\|leaf\|auto\|all` | Resolution — which nodes get their own pass. Comma lists allowed. Default `auto` |
-| `--report[=markdown\|codex]` | Export a readable report. Default `markdown` |
+| `--report[=markdown\|codex\|both]` | Export a readable report. Default `markdown` |
 | `--no-report` | Analyze only, no export |
 | `--report-only` | Re-render a report from stored results — runs no analysis |
 | `--force` | Ignore freshness, re-run, overwrite an existing report |
@@ -379,9 +379,12 @@ Analysis **reads your manuscript's structure before it asks you anything**, then
 a plan with the numbers that justify it, which you accept in one keystroke:
 
 > Chrysalis — 9 acts, 36 beats, 36:00, Planetarium Dome Show.
-> Suggest whole-show plus beat-by-beat: 37 passes. Report as markdown.
+> Suggest whole-show plus beat-by-beat: 37 passes.
 
-Any flag you pass suppresses its question, so the command stays scriptable.
+You are asked two things in one prompt — **how deep**, and **what report you want**
+(Markdown, Codex, Both, or none). Both come pre-answered with the proposal, so accepting
+is a keystroke. Any flag you pass suppresses its question, so the command stays
+scriptable.
 
 Results are written to `{manuscript}.analysis.json` beside the source, keeping up to
 three historical entries per module *per scope*. Your manuscript files are never
@@ -426,14 +429,29 @@ Chrysalis/
 ├── Chrysalis - Dome Show Script.codex.yaml
 ├── Chrysalis - Dome Show Script.analysis.json      ← machine record
 └── analysis/
-    └── chrysalis-dome-show-script-immersive-design-2026-08-04.md
+    ├── chrysalis-dome-show-script-immersive-design-2026-08-04.md
+    └── chrysalis-dome-show-script-immersive-design-2026-08-04.codex.yaml
 ```
 
-Markdown or Codex, your choice at runtime. The report is assembled **deterministically
-from the stored results** — it never calls a model, so regenerating costs nothing and it
-cannot drift from what was actually analyzed. It re-reads the source to emit in document
-order, so the report reads in show order rather than the order things happened to be
-written. `--report-only` regenerates or switches format without re-analyzing anything.
+**Markdown, Codex, or both — you are asked at runtime**, and the answer is remembered
+for next time:
+
+| Format | What you get |
+|---|---|
+| `markdown` | A Codex Lite document — frontmatter plus readable prose. What most writers want |
+| `codex` | Structured `.codex.yaml` mirroring your source tree. Re-imports, renders in the web app, can be analyzed further |
+| `both` | Both files, one stem. No extra cost — see below |
+
+The report is assembled **deterministically from the stored results** — it never calls a
+model, so regenerating costs nothing and it cannot drift from what was actually analyzed.
+It re-reads the source to emit in document order, so the report reads in show order
+rather than the order things happened to be written. Regenerating an unchanged report
+produces a byte-identical file. `--report-only` regenerates or switches format without
+re-analyzing anything.
+
+Codex reports are built **through `/chapterwise:format`** rather than beside it — the
+same auto-fixer that command runs, followed by validation against the Codex V1.3 schema.
+A report that does not validate is reported as a defect, not written silently.
 
 Structural modules in the Slow roast course (three-act, story beats, pacing, hero's journey) run once against the whole manuscript. Everything else runs per chapter.
 
@@ -461,9 +479,9 @@ wrong name.
 > Whole-show read plus every beat — 37 passes into one `.analysis.json`, then a markdown report in `analysis/`.
 
 ```
-/analysis immersive_design "Dome Show.codex.yaml" --report-only --report=codex
+/analysis immersive_design "Dome Show.codex.yaml" --report-only --report=both
 ```
-> Re-renders the existing results as Codex. No analysis, no cost.
+> Re-renders the existing results as Markdown and Codex. No analysis, no cost.
 
 ```
 /analysis --all --glob "chapters/*.codex.yaml"

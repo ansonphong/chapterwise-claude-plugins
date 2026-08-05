@@ -74,10 +74,25 @@ reference case — `root` gives the whole-show shape, `node:*` gives the scene s
 
 ## Reports
 
-`analysis_report.py` renders stored results into `<source_dir>/analysis/` as markdown or
-Codex V1.3. It is a formatter and never calls a model, so regenerating is free and the
-report cannot drift from the stored results. It walks the source tree to emit in document
-order, since entries are stored newest-first and flat.
+`analysis_report.py` renders stored results into `<source_dir>/analysis/` as markdown,
+Codex V1.3, or `both`. It is a formatter and never calls a model, so regenerating is free
+and the report cannot drift from the stored results. It walks the source tree to emit in
+document order, since entries are stored newest-first and flat. Ids are derived from what
+a node *is*, so a regenerated report is byte-identical.
+
+**The format is chosen at runtime.** `/analysis` asks depth and report format in one
+AskUserQuestion call, both pre-answered by the scan's proposal. Stating a format in prose
+and never offering the alternative is not asking — that was the v2.4.0 defect.
+
+**Codex output goes through `/chapterwise:format`.** `render_codex()` hands the assembled
+document to `CodexAutoFixer`, then `validate_output()` checks it against the V1.3 schema
+and the result carries `valid` / `issues`. Two consequences worth knowing:
+
+- Attribute keys must match `^[a-z][a-z0-9_-]*$` — `source_file`, not `sourceFile`. The
+  `.analysis.json` file is a different document under a different schema and keeps its
+  camelCase keys.
+- Node ids must be **v4-shaped** or the fixer replaces them. `stable_id()` stamps a sha1
+  digest with the v4 version and variant bits to be deterministic and survive the fixer.
 
 `analysis/` sits beside `atlas/` and `reader/` — the convention for deliverables derived
 from the manuscript. `.chapterwise/` holds machine state and reference inputs.

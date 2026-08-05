@@ -42,7 +42,7 @@ Inspect the arguments and route to the appropriate path:
 | Flag | Effect |
 |------|--------|
 | `--depth root\|N\|leaf\|auto\|all` | Resolution. Comma lists allowed: `--depth root,leaf` analyzes the whole file **and** every leaf. Default `auto` |
-| `--report[=markdown\|codex]` | Export a report. Default format `markdown` |
+| `--report[=markdown\|codex\|both]` | Export a report. Default format `markdown` |
 | `--no-report` | Analyze only, no export |
 | `--report-only` | Re-render the report from stored results; runs no analysis |
 | `--force` | Skip staleness checks and overwrite an existing report |
@@ -292,16 +292,23 @@ justify the proposal:
 > Chrysalis — 9 acts, 36 beats, 36:00, Planetarium Dome Show.
 > Suggest whole-show plus beat-by-beat: 37 passes. Report as markdown.
 
-Then one AskUserQuestion with the proposal already selected:
+Then **one AskUserQuestion call carrying two questions** — depth and report format —
+each with the proposal already selected:
 
-- **Run it** — accept the proposal
-- **Whole show only** — 1 pass
-- **Change depth** — pick a level
-- **No report** — analyze, skip the export
+| Question | Header | Options |
+|---|---|---|
+| How deep? | `Depth` | **Run it** (the proposed depth) · **Whole show only** (1 pass) · **Every leaf** · **Change depth** |
+| Report? | `Report` | **Markdown** · **Codex** · **Both** · **No report** |
 
-**Do not ask three separate questions.** Per `references/principles.md`, the agent
-decides and the user overrides. A proposal with one keystroke to accept is the shape
-this command is supposed to have.
+**One call, not three exchanges.** Per `references/principles.md`, the agent decides and
+the user overrides — the proposal is pre-selected, so accepting both is one keystroke.
+What is not acceptable is *stating* a format in prose and never offering the other one:
+the format is a choice, and the user makes it.
+
+Format guidance, if asked: **Markdown** reads like a document and is what most writers
+want. **Codex** is structured — it re-imports, renders in the web app, and can be
+analyzed further. **Both** costs nothing extra; the report is a re-render of results
+already on disk, not a second analysis.
 
 **Any flag suppresses its question.** If `--depth` is given, do not ask about depth. If
 `--report` or `--no-report` is given, do not ask about the report. If both are given,
@@ -379,17 +386,32 @@ echo '{"source": "SOURCE_FILE", "module": "MODULE_NAME", "format": "markdown"}' 
   | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/analysis_report.py
 ```
 
-`format` is `markdown` or `codex`, whichever the user chose. The report is assembled
-from what was just written to `.analysis.json` — it re-reads from disk and never calls a
-model, so it costs nothing and cannot drift from the stored results.
+`format` is `markdown`, `codex`, or `both` — whichever the user chose in Step 2d. The
+report is assembled from what was just written to `.analysis.json`: it re-reads from
+disk and never calls a model, so it costs nothing and cannot drift from the stored
+results.
 
-Lands in `{source_dir}/analysis/{slug}-{module}-{YYYY-MM-DD}.{md|codex.yaml}`.
+Lands in `{source_dir}/analysis/{slug}-{module}-{YYYY-MM-DD}.{md|codex.yaml}`. With
+`both`, the two files share one stem and `paths` lists them in order.
+
+**Codex output goes through `/chapterwise:format`.** The script hands the assembled
+document to `CodexAutoFixer` — the same engine behind the format command — before
+writing, then validates the result against the Codex V1.3 schema. This is not optional
+politeness: a generator that imitates its own format command drifts from it. Nothing to
+invoke by hand; it is wired into the codex renderer.
+
+Every write reports `valid` and `issues`. If `valid` is `false`, say so with the first
+issue and the file it came from — a report that does not parse as codex is a bug, not a
+formatting preference:
+
+> "Report written, but it does not validate: {issue}"
 
 If the script returns `"status": "exists"`, ask before overwriting:
 
 > "Report already exists: {path} — overwrite?"
 
-Re-run with `"force": true` if the user agrees.
+Re-run with `"force": true` if the user agrees. With `both`, a collision in *either*
+format blocks the write, and `paths` names the ones already there.
 
 `--report-only` runs this step alone, with no analysis. Use it to regenerate a report or
 switch format without spending anything.
@@ -785,6 +807,7 @@ echo '{"path":"file.codex.yaml","depth":"root,leaf"}' | python3 ${CLAUDE_PLUGIN_
 
 # Report export
 echo '{"source":"file.codex.yaml","module":"immersive_design","format":"markdown"}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/analysis_report.py
+echo '{"source":"file.codex.yaml","module":"immersive_design","format":"both","force":true}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/analysis_report.py
 
 # Validation
 echo '{"recipe_path":".chapterwise/analysis-recipe"}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/recipe_validator.py

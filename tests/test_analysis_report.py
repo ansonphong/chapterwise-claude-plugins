@@ -6,6 +6,7 @@ model, must come out in document order rather than write order, and must be
 byte-identical when regenerated from unchanged input.
 """
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -108,15 +109,13 @@ class TestDeterminism:
         b = Path(build(args)['path']).read_bytes()
         assert a == b
 
-    def test_codex_regeneration_differs_only_in_uuids(self, show):
-        """UUIDs are fresh per render; nothing else may move."""
+    def test_codex_regeneration_is_byte_identical(self, show):
+        """Ids are derived, not minted, so nothing at all moves between renders."""
         args = {'source': str(show), 'module': MODULE, 'format': 'codex',
                 'generated': '2026-08-04', 'generatedISO': '2026-08-04T00:00:00Z',
                 'force': True}
-        first = yaml.safe_load(Path(build(args)['path']).read_text(encoding='utf-8'))
-        second = yaml.safe_load(Path(build(args)['path']).read_text(encoding='utf-8'))
-        assert [c['name'] for c in first['children']] == [c['name'] for c in second['children']]
-        assert first['metadata'] == second['metadata']
+        assert (Path(build(args)['path']).read_bytes()
+                == Path(build(args)['path']).read_bytes())
 
 
 class TestMarkdown:
@@ -251,6 +250,102 @@ class TestHeadingDeduplication:
         assert 'Comfort & Load' in text and 'Something Else' in text
 
 
+class TestBothFormats:
+    """The report format is a runtime choice, and "both" is one of the answers."""
+
+    def test_writes_markdown_and_codex(self, show):
+        result = build({'source': str(show), 'module': MODULE,
+                        'format': 'both', 'generated': '2026-08-04'})
+        assert [Path(p).suffix for p in result['paths']] == ['.md', '.yaml']
+        assert all(Path(p).exists() for p in result['paths'])
+
+    def test_both_share_one_stem(self, show):
+        result = build({'source': str(show), 'module': MODULE,
+                        'format': 'both', 'generated': '2026-08-04'})
+        md, codex = (Path(p) for p in result['paths'])
+        assert md.stem == codex.name.split('.codex')[0]
+
+    def test_an_existing_file_in_either_format_blocks_both(self, show):
+        args = {'source': str(show), 'module': MODULE, 'generated': '2026-08-04'}
+        existing = Path(build({**args, 'format': 'codex'})['path'])
+        result = build({**args, 'format': 'both'})
+        assert result['status'] == 'exists'
+        assert str(existing) in result['paths']
+
+    def test_force_writes_over_both(self, show):
+        args = {'source': str(show), 'module': MODULE, 'generated': '2026-08-04'}
+        build({**args, 'format': 'codex'})
+        result = build({**args, 'format': 'both', 'force': True})
+        assert result['status'] == 'written' and len(result['paths']) == 2
+
+    def test_single_format_still_reports_one_path(self, show):
+        result = build({'source': str(show), 'module': MODULE,
+                        'generated': '2026-08-04'})
+        assert result['paths'] == [result['path']]
+
+
+class TestFormatAuthority:
+    """
+    The codex report is produced through the plugin's own format machinery.
+
+    A generator that imitates `/chapterwise:format` instead of using it is how
+    the two drift apart — and drift is exactly what shipped: attribute keys the
+    V1.3 schema forbids, unnoticed because nothing validated the output.
+    """
+
+    def _doc(self, show):
+        result = build({'source': str(show), 'module': MODULE, 'format': 'codex',
+                        'generated': '2026-08-04', 'force': True})
+        return result, yaml.safe_load(Path(result['path']).read_text(encoding='utf-8'))
+
+    def test_codex_report_passes_schema_validation(self, show):
+        result, _ = self._doc(show)
+        assert result['valid'] is True, result['issues']
+
+    def test_the_auto_fixer_actually_ran(self, show):
+        """documentVersion is the fixer's fingerprint — nothing else adds it."""
+        _, doc = self._doc(show)
+        assert doc['metadata']['documentVersion'] == '1.0.0'
+
+    def test_attribute_keys_are_schema_legal(self, show):
+        _, doc = self._doc(show)
+        keys = [a['key'] for a in doc['attributes']]
+        keys += [a['key'] for c in doc['children'] for a in c.get('attributes', [])]
+        assert keys, 'expected attributes to check'
+        assert all(re.fullmatch(r'[a-z][a-z0-9_-]*', k) for k in keys), keys
+
+    def test_ids_survive_the_fixer(self, show):
+        """
+        The fixer replaces any id that is not v4-shaped. Deterministic ids that
+        it rewrites are not deterministic.
+        """
+        _, first = self._doc(show)
+        _, second = self._doc(show)
+        assert first['id'] == second['id']
+        assert [c['id'] for c in first['children']] == [c['id'] for c in second['children']]
+
+    def test_ids_are_v4_shaped(self, show):
+        _, doc = self._doc(show)
+        v4 = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$')
+        assert v4.match(doc['id'])
+        assert all(v4.match(c['id']) for c in doc['children'])
+
+    def test_markdown_report_is_validated_too(self, show):
+        result = build({'source': str(show), 'module': MODULE,
+                        'generated': '2026-08-04', 'force': True})
+        assert result['valid'] is True and result['issues'] == []
+
+    def test_invalid_codex_is_reported_not_silently_written(self):
+        from analysis_report import validate_output
+        valid, issues = validate_output('codex', 'metadata: {}\nattributes:\n- key: badKey\n')
+        assert not valid and any('badKey' in i for i in issues)
+
+    def test_missing_frontmatter_is_caught(self):
+        from analysis_report import validate_output
+        valid, issues = validate_output('markdown', '# Just a heading\n')
+        assert not valid and 'frontmatter' in issues[0].lower()
+
+
 class TestCodexLiteFrontmatter:
     """The markdown report is a Codex Lite document, not loose markdown."""
 
@@ -266,7 +361,7 @@ class TestCodexLiteFrontmatter:
         fm = yaml.safe_load(text.split('---')[1])
         assert fm['type'] == 'analysis-report'
         assert fm['module'] == MODULE
-        assert fm['entryCount'] == 4
+        assert fm['entry_count'] == 4
 
     def test_frontmatter_records_the_model(self, show):
         fm = yaml.safe_load(self._text(show).split('---')[1])

@@ -12,6 +12,7 @@ Usage:
 """
 import json
 import logging
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -30,6 +31,43 @@ except ImportError:
     Draft202012Validator = None
 
 logger = logging.getLogger(__name__)
+
+
+def normalize_dates(value: Any) -> Any:
+    """
+    Render YAML timestamps as the ISO-8601 strings the schema describes.
+
+    PyYAML resolves an unquoted `created: 2025-01-26` into a `date`/`datetime`
+    object. The spec calls those fields strings, so a perfectly well-formed
+    document would otherwise fail validation on the way it was written rather
+    than on what it says. Only the shape handed to the validator changes —
+    nothing is written back to disk.
+    """
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    if isinstance(value, dict):
+        return {k: normalize_dates(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [normalize_dates(v) for v in value]
+    return value
+
+
+def _describe(err) -> Tuple[str, str]:
+    """
+    Reduce a validation error to the deepest thing that actually went wrong.
+
+    A `oneOf` failure — which is every child node in a recursive format —
+    reports the whole subtree as "is not valid under any of the given
+    schemas". Descending into the branch that got furthest turns that back
+    into a line and a reason a writer can act on.
+    """
+    parts = list(err.absolute_path)
+    while getattr(err, 'context', None):
+        err = max(err.context, key=lambda e: len(list(e.absolute_path)))
+        parts += list(err.absolute_path)
+    path = '.'.join(str(p) for p in parts) or 'root'
+    return path, err.message
+
 
 # Schema directory relative to this file
 SCHEMA_DIR = Path(__file__).parent.parent.parent.parent / 'schemas'
@@ -117,6 +155,10 @@ class SchemaValidator:
         self._validator_cache[schema_type] = validator
         return validator
 
+    @staticmethod
+    def _normalize_dates(value: Any) -> Any:
+        return normalize_dates(value)
+
     def validate(self, data: dict, schema_type: str) -> Tuple[bool, List[str]]:
         """
         Validate data against a schema.
@@ -137,7 +179,7 @@ class SchemaValidator:
             # Schema not found, skip validation
             return True, []
 
-        errors = list(validator.iter_errors(data))
+        errors = list(validator.iter_errors(normalize_dates(data)))
 
         if not errors:
             return True, []
@@ -145,8 +187,8 @@ class SchemaValidator:
         # Format error messages with path
         error_msgs = []
         for err in errors[:10]:  # Limit to 10 errors
-            path = '.'.join(str(p) for p in err.absolute_path) or 'root'
-            error_msgs.append(f"{path}: {err.message}")
+            path, message = _describe(err)
+            error_msgs.append(f"{path}: {message}")
 
         return False, error_msgs
 

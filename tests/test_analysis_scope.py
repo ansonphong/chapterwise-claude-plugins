@@ -11,6 +11,7 @@ entry in a module node and trim the list to 3. Pushing 37 scoped entries
 through that logic destroyed 34 of them.
 """
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -167,3 +168,48 @@ class TestScopeMetadata:
         a = attrs(entries_for(source)[0])
         assert a['scope'] == ROOT_SCOPE
         assert 'scopeName' not in a
+
+
+class TestAnalysisFileId:
+    """
+    The root id is schema-constrained to `^[a-zA-Z0-9_-]+-analysis$`.
+
+    Manuscript filenames contain spaces, so the raw stem cannot be used —
+    every analysis file written for a title like "Chrysalis - Dome Show
+    Script" was invalid until the stem was slugified.
+    """
+
+    def test_spaces_become_hyphens(self):
+        from analysis_writer import analysis_file_id
+        assert analysis_file_id('Chrysalis - Dome Show Script.codex.yaml') == \
+            'Chrysalis-Dome-Show-Script-analysis'
+
+    def test_punctuation_is_stripped(self):
+        from analysis_writer import analysis_file_id
+        assert re.fullmatch(r'[A-Za-z0-9_-]+-analysis',
+                            analysis_file_id("Ann's Book (draft #2).codex.yaml"))
+
+    def test_a_written_file_validates_against_the_schema(self, tmp_path):
+        from analysis_writer import add_analysis_result
+        from schema_validator import validate_analysis
+        src = tmp_path / 'Chrysalis - Dome Show Script.codex.yaml'
+        src.write_text('id: s\ntype: script\nname: S\nbody: x\n', encoding='utf-8')
+        out = add_analysis_result(src, 'immersive_design',
+                                  {'body': 'b', 'summary': 's'}, model='claude-opus-5')
+        valid, errors = validate_analysis(json.loads(out.read_text(encoding='utf-8')))
+        assert valid, errors
+
+    def test_a_legacy_invalid_id_is_repaired_on_the_next_write(self, tmp_path):
+        from analysis_writer import add_analysis_result, get_analysis_file_path
+        src = tmp_path / 'My Show.codex.yaml'
+        src.write_text('id: s\ntype: script\nname: S\nbody: x\n', encoding='utf-8')
+        add_analysis_result(src, 'summary', {'body': 'b', 'summary': 's'},
+                            model='claude-opus-5')
+        path = get_analysis_file_path(src)
+        data = json.loads(path.read_text(encoding='utf-8'))
+        data['id'] = 'My Show-analysis'          # what earlier versions wrote
+        path.write_text(json.dumps(data), encoding='utf-8')
+
+        add_analysis_result(src, 'summary', {'body': 'b2', 'summary': 's2'},
+                            model='claude-opus-5')
+        assert json.loads(path.read_text(encoding='utf-8'))['id'] == 'My-Show-analysis'

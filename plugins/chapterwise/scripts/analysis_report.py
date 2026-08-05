@@ -17,12 +17,14 @@ Output lands in <source_dir>/analysis/, alongside atlas/ and reader/ — the
 convention for deliverables derived from the manuscript, as against
 .chapterwise/ which holds machine state and reference inputs.
 """
+import hashlib
 import json
 import logging
 import sys
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
@@ -42,8 +44,22 @@ try:
 except ImportError:
     CURRENT_FORMAT_VERSION = '1.3'
 
+# The codex report is produced through the plugin's own format machinery rather
+# than beside it — see render_codex. Both are optional so the markdown path
+# still works in a stripped-down checkout.
+try:
+    from auto_fixer import CodexAutoFixer
+except ImportError:  # pragma: no cover - only when the fixer is absent
+    CodexAutoFixer = None
+
+try:
+    from schema_validator import validate_codex
+except ImportError:  # pragma: no cover - only when jsonschema is absent
+    validate_codex = None
+
 REPORT_DIR = 'analysis'
-FORMATS = ('markdown', 'codex')
+RENDERABLE = ('markdown', 'codex')
+FORMATS = RENDERABLE + ('both',)
 
 
 def attrs_of(node: Dict[str, Any]) -> Dict[str, Any]:
@@ -121,13 +137,21 @@ def _opens_with_heading(content: str, name: str) -> bool:
 
 def stable_id(*parts: str) -> str:
     """
-    Deterministic UUID for a report node.
+    Deterministic, v4-shaped UUID for a report node.
 
-    Regenerating a report from unchanged results must produce an identical
-    file, so ids are derived from what the node *is* rather than minted fresh.
+    Two constraints meet here. Regenerating a report from unchanged results
+    must produce an identical file, so ids are derived from what the node *is*
+    rather than minted fresh. And the auto-fixer — the format authority this
+    script defers to — treats anything that is not v4-shaped as a broken id and
+    replaces it. A plain uuid5 satisfies the first and fails the second, so the
+    digest is stamped with the v4 version and variant bits.
     """
-    import uuid
-    return str(uuid.uuid5(uuid.NAMESPACE_URL, 'chapterwise:analysis-report:' + '|'.join(parts)))
+    digest = hashlib.sha1(
+        ('chapterwise:analysis-report:' + '|'.join(parts)).encode('utf-8')).digest()
+    raw = bytearray(digest[:16])
+    raw[6] = (raw[6] & 0x0F) | 0x40   # version 4
+    raw[8] = (raw[8] & 0x3F) | 0x80   # RFC 4122 variant
+    return str(uuid.UUID(bytes=bytes(raw)))
 
 
 def _yaml_scalar(value: str) -> str:
@@ -199,10 +223,10 @@ def render_markdown(ctx: Dict[str, Any]) -> str:
         'type: analysis-report',
         f"summary: {_yaml_scalar(ctx['summary'])}",
         f"module: {ctx['module']}",
-        f"sourceFile: {_yaml_scalar(ctx['sourceFile'])}",
+        f"source_file: {_yaml_scalar(ctx['sourceFile'])}",
         f"generated: {ctx['generatedISO']}",
         f"model: {_yaml_scalar(ctx['model'])}",
-        f"entryCount: {ctx['entryCount']}",
+        f"entry_count: {ctx['entryCount']}",
         f"word_count: {len(body.split())}",
         'status: published',
         f"tags: analysis, {ctx['module'].replace('_', '-')}, report",
@@ -213,10 +237,29 @@ def render_markdown(ctx: Dict[str, Any]) -> str:
 
 # ── codex ────────────────────────────────────────────────────────────────────
 
+class _BlockDumper(yaml.SafeDumper):
+    """Literal block scalars for long text — the shape /chapterwise:format writes."""
+
+
+def _block_str(dumper, data):
+    if '\n' in data or len(data) > 80:
+        return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='|')
+    return dumper.represent_scalar('tag:yaml.org,2002:str', data)
+
+
+_BlockDumper.add_representer(str, _block_str)
+
+
 def render_codex(ctx: Dict[str, Any]) -> str:
     """
-    Codex V1.3 report. Structure follows commands/format.md — every node carries
-    a UUID id, metadata.formatVersion is set, and the tree mirrors the source.
+    Codex V1.3 report, emitted through the plugin's own format machinery.
+
+    The document is assembled here and then handed to `CodexAutoFixer` — the
+    same engine behind `/chapterwise:format` — rather than being hand-rolled
+    all the way to disk. That is deliberate: a generator that imitates its own
+    format command is how the two drift apart. Attribute keys are lowercase
+    because the Codex V1.3 schema requires it; the fixer would otherwise
+    rewrite them.
     """
     children = []
     for item in ctx['items']:
@@ -231,7 +274,7 @@ def render_codex(ctx: Dict[str, Any]) -> str:
         }
         if item.get('path'):
             node['attributes'].append(
-                {'key': 'scopePath', 'value': item['path'], 'dataType': 'string'})
+                {'key': 'scope_path', 'value': item['path'], 'dataType': 'string'})
         if item.get('orphan'):
             node['attributes'].append(
                 {'key': 'orphan', 'value': True, 'dataType': 'boolean'})
@@ -268,18 +311,54 @@ def render_codex(ctx: Dict[str, Any]) -> str:
         'summary': ctx['summary'],
         'attributes': [
             {'key': 'module', 'value': ctx['module'], 'dataType': 'string'},
-            {'key': 'sourceFile', 'value': ctx['sourceFile'], 'dataType': 'string'},
+            {'key': 'source_file', 'value': ctx['sourceFile'], 'dataType': 'string'},
             {'key': 'generated', 'value': ctx['generatedISO'], 'dataType': 'string'},
             {'key': 'model', 'value': ctx['model'], 'dataType': 'string'},
-            {'key': 'entryCount', 'value': ctx['entryCount'], 'dataType': 'int'},
+            {'key': 'entry_count', 'value': ctx['entryCount'], 'dataType': 'int'},
         ],
         'children': children,
     }
-    return yaml.safe_dump(doc, sort_keys=False, allow_unicode=True, width=100)
+
+    if CodexAutoFixer is not None:
+        doc, fixes = CodexAutoFixer().auto_fix_codex(None, doc)
+        for fix in fixes:
+            logger.info('format: %s', fix)
+
+    return yaml.dump(doc, Dumper=_BlockDumper, sort_keys=False,
+                     allow_unicode=True, width=100, default_flow_style=False)
 
 
 RENDERERS = {'markdown': render_markdown, 'codex': render_codex}
 EXTENSIONS = {'markdown': '.md', 'codex': '.codex.yaml'}
+
+# Codex Lite requires these in frontmatter; the codex path is schema-checked.
+LITE_REQUIRED = ('id', 'type', 'name')
+
+
+def validate_output(fmt: str, rendered: str) -> Tuple[bool, List[str]]:
+    """
+    Check a rendered report against the format it claims to be.
+
+    A report is a codex document, so it is validated like one. Skipping this
+    is what let the codex renderer ship attribute keys the V1.3 schema
+    forbids — nothing downstream was ever asked to read it back.
+    """
+    if fmt == 'codex':
+        if validate_codex is None:
+            return True, []
+        try:
+            return validate_codex(yaml.safe_load(rendered))
+        except yaml.YAMLError as exc:
+            return False, [f'Report is not parseable YAML: {exc}']
+
+    if not rendered.startswith('---\n'):
+        return False, ['Codex Lite report is missing its frontmatter']
+    try:
+        frontmatter = yaml.safe_load(rendered.split('---', 2)[1]) or {}
+    except yaml.YAMLError as exc:
+        return False, [f'Frontmatter is not parseable YAML: {exc}']
+    missing = [f for f in LITE_REQUIRED if not frontmatter.get(f)]
+    return (not missing), [f'Frontmatter is missing {f}' for f in missing]
 
 
 def build(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -321,31 +400,52 @@ def build(data: Dict[str, Any]) -> Dict[str, Any]:
         'items': items,
     }
 
-    rendered = RENDERERS[fmt](ctx)
-
     slug = source_path.name.split('.codex')[0].lower().replace(' ', '-')
     slug = ''.join(c for c in slug if c.isalnum() or c in '-_')
-    filename = f"{slug}-{module.replace('_', '-')}-{generated}{EXTENSIONS[fmt]}"
-    out_path = source_path.parent / REPORT_DIR / filename
+    stem = f"{slug}-{module.replace('_', '-')}-{generated}"
 
-    if out_path.exists() and not data.get('force'):
+    wanted = RENDERABLE if fmt == 'both' else (fmt,)
+    targets = [(f, source_path.parent / REPORT_DIR / f"{stem}{EXTENSIONS[f]}")
+               for f in wanted]
+
+    collisions = [p for _, p in targets if p.exists()]
+    if collisions and not data.get('force'):
         return {
             'status': 'exists',
-            'path': str(out_path),
-            'message': f"Report already exists: {out_path}",
+            'path': str(collisions[0]),
+            'paths': [str(p) for p in collisions],
+            'message': ('Report already exists: '
+                        + ', '.join(str(p) for p in collisions)),
         }
 
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(rendered, encoding='utf-8')
+    outputs = []
+    for one_format, out_path in targets:
+        rendered = RENDERERS[one_format](ctx)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(rendered, encoding='utf-8')
+        valid, issues = validate_output(one_format, rendered)
+        outputs.append({
+            'format': one_format,
+            'path': str(out_path),
+            'bytes': len(rendered.encode('utf-8')),
+            'valid': valid,
+            'issues': issues,
+        })
+        for issue in issues:
+            logger.warning('%s: %s', out_path.name, issue)
 
     return {
         'status': 'written',
-        'path': str(out_path),
+        'path': outputs[0]['path'],
+        'paths': [o['path'] for o in outputs],
         'format': fmt,
         'module': module,
         'entryCount': len(items),
         'scopes': [i['scope'] for i in items],
-        'bytes': len(rendered.encode('utf-8')),
+        'bytes': outputs[0]['bytes'],
+        'valid': all(o['valid'] for o in outputs),
+        'issues': [f"{o['format']}: {i}" for o in outputs for i in o['issues']],
+        'outputs': outputs,
     }
 
 

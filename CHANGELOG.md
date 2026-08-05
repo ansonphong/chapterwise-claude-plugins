@@ -5,6 +5,103 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.0] - 2026-08-05
+
+### Added
+
+- **The report format is a question, not an assumption.** `/analysis` now asks
+  depth *and* report format in one prompt — Markdown, Codex, Both, or none —
+  with the proposal pre-selected so accepting is a keystroke. v2.4.0 shipped
+  both renderers and a `--report=` flag but only ever *stated* the format in
+  prose; choosing Codex meant knowing the flag existed.
+- **`--report=both`** writes Markdown and Codex from one run. They share a
+  stem, and a collision in either format blocks the write.
+
+### Fixed
+
+- **Codex reports are built through `/chapterwise:format`, not beside it.**
+  The renderer hand-rolled its YAML and imitated the format command. It now
+  hands the assembled document to `CodexAutoFixer` — the engine behind that
+  command — and validates the result against the Codex V1.3 schema.
+- **Codex reports were invalid, and nothing noticed.** `sourceFile`,
+  `entryCount`, and `scopePath` break the schema's attribute-key rule
+  (`^[a-z][a-z0-9_-]*$`). They are now `source_file`, `entry_count`, and
+  `scope_path`. Reports written by v2.4.0 should be regenerated with
+  `--report-only`.
+- **No nested codex document could ever validate.** The V1.3 schema recursed
+  into children with `$ref: "#"`, which carries the root's
+  `required: [metadata]` — so every child node failed for lacking metadata it
+  is not supposed to have. Children now reference a `node` definition where
+  metadata is optional. This is why generators never validated their own
+  output: it would have failed on everything.
+- **YAML timestamps no longer fail validation.** PyYAML resolves an unquoted
+  `created: 2025-01-26` into a date object; the spec calls the field a string.
+  The validator normalizes dates before checking, so a well-formed document no
+  longer fails on how it was written.
+- **Validation errors name the node that broke.** A `oneOf` failure used to
+  report an entire subtree as "not valid under any of the given schemas". It
+  now descends to the deepest cause: `children.2.children.0.images.4: 'url' is
+  a required property`.
+- **Analysis files had an invalid root id.** It was `<filename>-analysis` with
+  the filename verbatim, so any manuscript with a space in its name — most of
+  them — produced an id the analysis schema rejects. The stem is now
+  slugified, and a legacy invalid id is repaired on the next write.
+- **Report ids survive the formatter.** They were `uuid5`, which is
+  deterministic but not v4-shaped, so the auto-fixer would have replaced every
+  one of them on sight. They are now derived deterministically *and* v4-shaped,
+  and a regenerated codex report is byte-identical.
+
+## [2.4.0] - 2026-08-04
+
+### Added
+
+- **Analysis resolution.** Granularity is now depth in the codex tree rather than one
+  pass per file. `--depth` takes `root`, an integer, `leaf`, `auto`, `all`, or a comma
+  list — `--depth root,leaf` gives a whole-work synthesis *and* a pass over every leaf.
+  A dome script holding 9 acts and 36 beats yields 37 analyses instead of 1.
+- **Scoped entries.** Results carry a `scope` (`root` or `node:<id>`) plus `scopeName`,
+  `scopePath`, `scopeDepth` and `scopeIndex`, and all live in the same `.analysis.json`
+  sibling. No new file paths, so `chapterwise-web`, `chapterwise-app` and
+  `staleness_checker` need no changes. An entry with no `scope` reads as `root`.
+- **`scripts/codex_scan.py`** — structural scan (`scan`) and node resolution (`nodes`).
+  `/analysis` now reads a manuscript's shape *before* asking anything, and proposes with
+  the numbers that justify it. Structure only, so it stays cheap on long manuscripts.
+- **`scripts/analysis_report.py`** — exports readable reports to `<source_dir>/analysis/`
+  in markdown or Codex V1.3. A formatter, not an analyst: it never calls a model, so
+  regenerating is free and the report cannot drift from the stored results. It walks the
+  source tree to emit in document order. `--report-only` re-renders or switches format
+  without re-analyzing.
+- Report and depth choices persist to `analysis-recipe` — asked once, not every run.
+
+### Changed
+
+- `/analysis` proposes rather than interrogates. One question with the recommendation
+  preselected, and any flag suppresses its own question so the command stays scriptable.
+- Analysis history is kept **per scope**.
+- Entry ids gained a scope suffix; the analysis schema already permitted one.
+- `analysis/` documented as a deliverable folder alongside `atlas/` and `reader/`, as
+  against `.chapterwise/` for machine state and reference inputs.
+
+### Fixed
+
+- **Analysis history no longer destroys scoped results.** `add_analysis_result()` marked
+  every entry in a module stale and trimmed the list to three. That was correct when a
+  module held one analysis per file, but writing 37 scoped entries through it kept 3 and
+  deleted 34 — it treated other nodes' analyses as older versions of the one being
+  written. Staling and trimming now partition by scope.
+- **`immersive_design`'s scene-level output shape is reachable.** It shipped in v2.1.0
+  defining two shapes, whole-show and scene, but the runner only ever analyzed whole
+  files — so for a dome script, which is one file containing its scenes, the scene shape
+  could not be produced. Modules with multiple shapes now select by scope.
+- **Analysis entries record the model that actually ran.** `analysis_writer.py` defaulted
+  to `claude-sonnet-4` and its CLI could not pass anything else, so every `.analysis.json`
+  the plugin had written carried that stamp regardless of what produced it. Resolution is
+  now `--model` → payload `model` key → `CHAPTERWISE_ANALYSIS_MODEL` → `unknown`. No
+  concrete model name is a fallback: an unreported model writes `unknown`, which is
+  honest, where a plausible wrong name is not.
+- Entry ids collided when many entries were written inside the same second — timestamps
+  are second-resolution and a scoped run writes dozens.
+
 ## [2.3.0] - 2026-08-04
 
 ### Fixed
@@ -95,57 +192,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `.spreadsheet.yaml` files carry their own independent `formatVersion: "1.0"`, matching
 `chapterwise-web`'s generator. That value is unrelated to the codex spec version and was
 deliberately left alone.
-
-## [2.4.0] - 2026-08-04
-
-### Added
-
-- **Analysis resolution.** Granularity is now depth in the codex tree rather than one
-  pass per file. `--depth` takes `root`, an integer, `leaf`, `auto`, `all`, or a comma
-  list — `--depth root,leaf` gives a whole-work synthesis *and* a pass over every leaf.
-  A dome script holding 9 acts and 36 beats yields 37 analyses instead of 1.
-- **Scoped entries.** Results carry a `scope` (`root` or `node:<id>`) plus `scopeName`,
-  `scopePath`, `scopeDepth` and `scopeIndex`, and all live in the same `.analysis.json`
-  sibling. No new file paths, so `chapterwise-web`, `chapterwise-app` and
-  `staleness_checker` need no changes. An entry with no `scope` reads as `root`.
-- **`scripts/codex_scan.py`** — structural scan (`scan`) and node resolution (`nodes`).
-  `/analysis` now reads a manuscript's shape *before* asking anything, and proposes with
-  the numbers that justify it. Structure only, so it stays cheap on long manuscripts.
-- **`scripts/analysis_report.py`** — exports readable reports to `<source_dir>/analysis/`
-  in markdown or Codex V1.3. A formatter, not an analyst: it never calls a model, so
-  regenerating is free and the report cannot drift from the stored results. It walks the
-  source tree to emit in document order. `--report-only` re-renders or switches format
-  without re-analyzing.
-- Report and depth choices persist to `analysis-recipe` — asked once, not every run.
-
-### Changed
-
-- `/analysis` proposes rather than interrogates. One question with the recommendation
-  preselected, and any flag suppresses its own question so the command stays scriptable.
-- Analysis history is kept **per scope**.
-- Entry ids gained a scope suffix; the analysis schema already permitted one.
-- `analysis/` documented as a deliverable folder alongside `atlas/` and `reader/`, as
-  against `.chapterwise/` for machine state and reference inputs.
-
-### Fixed
-
-- **Analysis history no longer destroys scoped results.** `add_analysis_result()` marked
-  every entry in a module stale and trimmed the list to three. That was correct when a
-  module held one analysis per file, but writing 37 scoped entries through it kept 3 and
-  deleted 34 — it treated other nodes' analyses as older versions of the one being
-  written. Staling and trimming now partition by scope.
-- **`immersive_design`'s scene-level output shape is reachable.** It shipped in v2.1.0
-  defining two shapes, whole-show and scene, but the runner only ever analyzed whole
-  files — so for a dome script, which is one file containing its scenes, the scene shape
-  could not be produced. Modules with multiple shapes now select by scope.
-- **Analysis entries record the model that actually ran.** `analysis_writer.py` defaulted
-  to `claude-sonnet-4` and its CLI could not pass anything else, so every `.analysis.json`
-  the plugin had written carried that stamp regardless of what produced it. Resolution is
-  now `--model` → payload `model` key → `CHAPTERWISE_ANALYSIS_MODEL` → `unknown`. No
-  concrete model name is a fallback: an unreported model writes `unknown`, which is
-  honest, where a plausible wrong name is not.
-- Entry ids collided when many entries were written inside the same second — timestamps
-  are second-resolution and a scoped run writes dozens.
 
 ## [2.1.0] - 2026-08-04
 

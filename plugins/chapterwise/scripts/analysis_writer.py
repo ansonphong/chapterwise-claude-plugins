@@ -81,11 +81,23 @@ def _set_attribute(node: dict, key: str, value: Any) -> None:
     attrs.append({'key': key, 'value': value})
 
 
+def analysis_file_id(source_filename: str) -> str:
+    """
+    Root id for an analysis file, as `<slug>-analysis`.
+
+    The analysis schema constrains this to `^[a-zA-Z0-9_-]+-analysis$`, so a
+    manuscript whose filename contains spaces or punctuation — which is most
+    of them — cannot contribute its stem verbatim.
+    """
+    base_name = Path(source_filename).stem.replace('.codex', '')
+    slug = re.sub(r'[^A-Za-z0-9_]+', '-', base_name).strip('-')
+    return f'{slug or "manuscript"}-analysis'
+
+
 def create_analysis_file_structure(source_path: Path, source_hash: str) -> Dict:
     """Create initial structure for a new analysis file (Codex V1.3 format)."""
     now = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
     source_filename = os.path.basename(source_path)
-    base_name = Path(source_filename).stem.replace('.codex', '')
 
     return {
         'metadata': {
@@ -93,7 +105,7 @@ def create_analysis_file_structure(source_path: Path, source_hash: str) -> Dict:
             'created': now,
             'updated': now
         },
-        'id': f'{base_name}-analysis',
+        'id': analysis_file_id(source_filename),
         'type': 'analysis',
         'name': 'Analysis Results',
         'attributes': [
@@ -284,6 +296,13 @@ def add_analysis_result(
             data = create_analysis_file_structure(source_path, source_hash)
     else:
         data = create_analysis_file_structure(source_path, source_hash)
+
+    # Repair a root id written before the id was slugified. Files created by
+    # earlier versions carry the raw filename, spaces and all, which the
+    # analysis schema rejects.
+    expected_id = analysis_file_id(os.path.basename(source_path))
+    if not re.fullmatch(r'[A-Za-z0-9_-]+-analysis', str(data.get('id', ''))):
+        data['id'] = expected_id
 
     # Update root sourceHash attribute
     _set_attribute(data, 'sourceHash', source_hash)
