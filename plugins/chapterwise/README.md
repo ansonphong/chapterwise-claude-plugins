@@ -422,7 +422,7 @@ An atlas is a standalone reference document synthesized from the whole manuscrip
 | 2 — Analyze | Genre-appropriate analysis modules run across chapters (reusing anything already fresh) |
 | 3 — Synthesize | One subagent per section condenses everything into the finished atlas |
 
-**Sections** — characters, timeline, themes, plot structure, locations, relationships, world. Non-fiction projects get topic map and key concepts instead; poetry gets imagery and devices. Layouts scale: Simple (flat), Standard (one file per section), Detailed (nested subfolders).
+**Sections** — proposed to fit the manuscript. Fiction gets characters, timeline, themes, plot structure, locations, relationships, and world. Non-fiction gets topic map, key arguments, chapter summaries, and source references. Poetry gets themes, imagery, devices, and emotional arc. Layouts scale: Simple (flat), Standard (one file per section), Detailed (nested subfolders).
 
 **Outputs**
 
@@ -1389,7 +1389,9 @@ A module can belong to more than one course. The remaining 15 modules belong to 
 |---|---|
 | `immersive_design` | Dome show and projection design — proposes effects, maps crescendo and lull, flags vestibular comfort risk |
 
-`immersive_design` is backed by two references: `immersive-effects.md` catalogs 59 named effects across 9 categories, each with its mechanic, target reaction, arc position, comfort risk, and a sourcing-confidence tag; `immersive-comfort.md` collects vestibular thresholds (roughly a 20°/s rotation ceiling, multi-axis rotation as the strongest risk factor, an earth-fixed horizon as the primary mitigation) and fulldome pacing guidance. Claims in both are tagged Measured, Guideline, or Consensus rather than presented as settled.
+`immersive_design` is backed by two references: `immersive-effects.md` catalogs 59 named effects across 9 categories, each with its mechanic, target reaction, arc position, comfort risk, and a sourcing-confidence tag; `immersive-comfort.md` collects vestibular thresholds (roughly a 20°/s rotation ceiling, multi-axis rotation as the strongest risk factor, an earth-fixed horizon as the primary mitigation) and fulldome pacing guidance.
+
+Both references rate their own reliability rather than presenting craft as physics, on separate scales. Effects carry a **Confidence** tag — `Documented` (a named source describes the technique), `Observed practice` (demonstrably standard but not formally written up), or `ChapterWise coinage` (we named it; it may still be real and useful, but no external source calls it that). Comfort claims carry a **Tier** — `Measured` (peer-reviewed with published numbers), `Guideline` (published platform or industry standard), or `Consensus` (named practitioners agree, no controlled study).
 
 ### The `.analysis.json` format
 
@@ -1411,7 +1413,7 @@ Results are written beside the source chapter, in Codex V1.3:
       "name": "Character Analysis",
       "children": [
         {
-          "id": "entry-20260804T142233z",
+          "id": "entry-20260804T142233Z",
           "type": "analysis-entry",
           "status": "published",
           "attributes": [
