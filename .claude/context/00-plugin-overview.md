@@ -1,19 +1,21 @@
 # Plugin Overview
 
-ChapterWise is a Claude Code plugin (v2.0.0) providing a complete writing toolkit -- manuscript import, AI analysis, story atlas generation, research, and static reader builds. It lives under `plugins/chapterwise/`.
+ChapterWise is a Claude Code plugin (v2.2.0) providing a complete writing toolkit -- manuscript import, AI analysis, story atlas generation, research, and static reader builds. It lives under `plugins/chapterwise/`.
 
 ## Manifest
 
-`plugins/chapterwise/.claude-plugin/plugin.json` declares the plugin. A duplicate lives at the repo root `.claude-plugin/plugin.json`. Name: `chapterwise`, author: Anson Phong, license: MIT.
+`plugins/chapterwise/.claude-plugin/plugin.json` declares the plugin — the single source of truth for its version. Name: `chapterwise`, author: Anson Phong, license: MIT.
+
+The repo root holds `.claude-plugin/marketplace.json` only; the repo is a marketplace, not itself a plugin. A duplicate root `plugin.json` was removed 2026-08-04 — it declared the whole repo an empty plugin (no `commands/` beside it) and drifted out of sync with the real manifest.
 
 ## Directory Structure
 
 ```
 plugins/chapterwise/
 ├── .claude-plugin/plugin.json    # Plugin manifest
-├── commands/          # 23 slash command files (YAML frontmatter + markdown body)
-├── modules/           # 32 analysis modules + _output-format.md partial
-├── scripts/           # 26 Python utility scripts (stdin JSON / argparse / library)
+├── commands/          # 24 slash command files (YAML frontmatter + markdown body)
+├── modules/           # 33 analysis modules + _output-format.md partial
+├── scripts/           # 28 Python utility scripts (stdin JSON / argparse / library)
 ├── patterns/          # 7 format converters + common/ utilities
 ├── templates/         # Reader HTML templates (minimal-reader, academic-reader)
 ├── references/        # principles.md, language-rules.md, insert reference docs
