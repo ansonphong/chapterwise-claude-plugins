@@ -57,7 +57,11 @@ try:
 except ImportError:  # pragma: no cover - only when jsonschema is absent
     validate_codex = None
 
-REPORT_DIR = 'analysis'
+from settings import DEFAULTS as SETTING_DEFAULTS  # noqa: E402
+from settings import load as load_settings  # noqa: E402
+from settings import resolve_report_dir  # noqa: E402
+
+REPORT_DIR = SETTING_DEFAULTS['analysis']['report_dir']
 RENDERABLE = ('markdown', 'codex')
 FORMATS = RENDERABLE + ('both',)
 
@@ -364,9 +368,19 @@ def validate_output(fmt: str, rendered: str) -> Tuple[bool, List[str]]:
 def build(data: Dict[str, Any]) -> Dict[str, Any]:
     source_path = Path(data['source']).expanduser().resolve()
     module = data['module']
-    fmt = data.get('format', 'markdown')
+
+    # Explicit payload beats project settings beats plugin defaults. Nothing
+    # here writes settings back — a one-off `format` should not redefine the
+    # project. See settings.py.
+    project, _sources, settings_file, configured = load_settings(source_path)
+    analysis_settings = project.get('analysis', {})
+
+    fmt = data.get('format') or analysis_settings.get('report_format')
     if fmt not in FORMATS:
         raise ValueError(f"Unknown format {fmt!r}. Use one of: {', '.join(FORMATS)}")
+
+    report_dir = resolve_report_dir(
+        source_path, data.get('report_dir') or analysis_settings.get('report_dir'))
 
     analysis_path = get_analysis_file_path(source_path)
     if not analysis_path.exists():
@@ -405,8 +419,7 @@ def build(data: Dict[str, Any]) -> Dict[str, Any]:
     stem = f"{slug}-{module.replace('_', '-')}-{generated}"
 
     wanted = RENDERABLE if fmt == 'both' else (fmt,)
-    targets = [(f, source_path.parent / REPORT_DIR / f"{stem}{EXTENSIONS[f]}")
-               for f in wanted]
+    targets = [(f, report_dir / f"{stem}{EXTENSIONS[f]}") for f in wanted]
 
     collisions = [p for _, p in targets if p.exists()]
     if collisions and not data.get('force'):
@@ -446,6 +459,9 @@ def build(data: Dict[str, Any]) -> Dict[str, Any]:
         'valid': all(o['valid'] for o in outputs),
         'issues': [f"{o['format']}: {i}" for o in outputs for i in o['issues']],
         'outputs': outputs,
+        'reportDir': str(report_dir),
+        'settingsConfigured': configured,
+        'settingsPath': str(settings_file),
     }
 
 

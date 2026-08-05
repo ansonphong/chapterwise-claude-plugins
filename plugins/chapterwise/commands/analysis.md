@@ -42,14 +42,43 @@ Inspect the arguments and route to the appropriate path:
 | Flag | Effect |
 |------|--------|
 | `--depth root\|N\|leaf\|auto\|all` | Resolution. Comma lists allowed: `--depth root,leaf` analyzes the whole file **and** every leaf. Default `auto` |
-| `--report[=markdown\|codex\|both]` | Export a report. Default format `markdown` |
+| `--report[=markdown\|codex\|both]` | Export a report. Default from settings, then `codex` |
+| `--report-dir <path>` | Where the report goes. Relative = beside the file; leading `/` = project root |
 | `--no-report` | Analyze only, no export |
 | `--report-only` | Re-render the report from stored results; runs no analysis |
 | `--force` | Skip staleness checks and overwrite an existing report |
 | `--dry-run` | Show what would run; write nothing |
 
 **Any flag suppresses its question.** Passing `--depth` and `--report` together runs the
-whole thing without prompting — this command has to be scriptable.
+whole thing without prompting — this command has to be scriptable. So does a configured
+setting: see *Settings* below.
+
+### Settings
+
+`.chapterwise/settings.json` holds what this project does by default. It is read before
+anything is asked, and written only when the user says to:
+
+```json
+{
+  "version": 1,
+  "analysis": {
+    "report": true,
+    "report_format": "codex",
+    "report_dir": "analysis",
+    "depth": "auto"
+  }
+}
+```
+
+Resolution, lowest to highest: **plugin defaults → `.chapterwise/settings.json` → flags.**
+Defaults are codex reports into an `analysis/` folder beside the analyzed file.
+
+`report_dir` resolves the way codex `include` paths do — `analysis` and `./analysis` sit
+beside the manuscript, `/reports` is from the project root, `~/…` is a literal path.
+
+Settings are *intent* and are committed. The `*-recipe` folders beside them are *history*
+— what a command last did. Settings-shaped keys left in an older recipe are honoured until
+a settings file exists, and folded in when one is written.
 
 ### Resolution
 
@@ -271,10 +300,20 @@ Use AskUserQuestion:
 
 If `isStale` is `true`, proceed without asking.
 
-### Step 2d: Scan the structure, then propose
+### Step 2d: Read the settings, scan the structure, then propose
 
-**Scan before asking anything.** A manuscript's shape determines what a useful question
-even is, and this is cheap — structure only, never full content.
+**Read the project's settings first.** Anything already configured is not a question.
+
+```bash
+echo '{"source": "SOURCE_FILE"}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/settings.py resolve
+```
+
+Returns `report`, `report_format`, `report_dir` (already resolved to a real path),
+`depth`, plus `found` and a `sources` map saying whether each value came from
+`settings`, an older `recipe`, or the plugin `default`.
+
+**Scan before asking anything else.** A manuscript's shape determines what a useful
+question even is, and this is cheap — structure only, never full content.
 
 ```bash
 echo '{"path": "SOURCE_FILE"}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/codex_scan.py scan
@@ -310,12 +349,15 @@ want. **Codex** is structured — it re-imports, renders in the web app, and can
 analyzed further. **Both** costs nothing extra; the report is a re-render of results
 already on disk, not a second analysis.
 
-**Any flag suppresses its question.** If `--depth` is given, do not ask about depth. If
-`--report` or `--no-report` is given, do not ask about the report. If both are given,
-run silently.
+**Two things suppress a question: a flag, and a setting.**
 
-Check `.chapterwise/analysis-recipe` first — if `depth` and `report_format` were saved
-from a previous run, offer those as the proposal instead of the scanner's default.
+| `sources[...]` | What to do |
+|---|---|
+| `settings` or `recipe` | Configured. **Do not ask.** Use it and say so in one clause: "Report as codex, per your settings." |
+| `default` | Not configured. Ask, with the proposal pre-selected |
+
+A flag beats both and is never written back — a one-off run should not redefine the
+project. If every value is either flagged or configured, ask nothing and run.
 
 ### Step 2e: Resolve the nodes to analyze
 
@@ -416,15 +458,38 @@ format blocks the write, and `paths` names the ones already there.
 `--report-only` runs this step alone, with no analysis. Use it to regenerate a report or
 switch format without spending anything.
 
-### Step 2j: Save the choice
+### Step 2j: Offer to save the choice — once
 
-Persist so it is asked once, not every run:
+Skip entirely if `settings.py resolve` reported `found: true`, or if the answers match
+what was already configured. **A configured project is never asked again.**
+
+Otherwise — the first real run in this project — ask once, after the work is done and
+the user has seen the result:
+
+> "Save these as this project's defaults? Codex reports into `analysis/`."
+
+- **Save** — write `.chapterwise/settings.json`
+- **Not now** — run as asked, ask again next time
+
+On **Save**:
 
 ```bash
-echo '{"recipe_path": ".chapterwise/analysis-recipe", "updates": {"depth": "DEPTH", "report_format": "FORMAT", "report_enabled": true}}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/recipe_manager.py update
+echo '{"path": "SOURCE_FILE", "updates": {"analysis": {"report_format": "FORMAT", "report_dir": "analysis", "depth": "DEPTH", "report": true}}}' \
+  | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/settings.py set
 ```
 
-Save silently.
+Then confirm in one line: `"Saved to .chapterwise/settings.json."`
+
+**Only write what the user actually chose.** Do not persist a value that came from a
+one-off flag — `--report=markdown` on a single run is not a decision about the project.
+
+Also record the run in the recipe, as before — that is run history, not configuration:
+
+```bash
+echo '{"recipe_path": ".chapterwise/analysis-recipe", "updates": {"modules_run": [...], "chapters_analyzed": N}}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/recipe_manager.py update
+```
+
+Save the recipe silently.
 
 ### Step 2k: Confirm
 
@@ -807,6 +872,10 @@ echo '{"path":"file.codex.yaml","depth":"root,leaf"}' | python3 ${CLAUDE_PLUGIN_
 
 # Report export
 echo '{"source":"file.codex.yaml","module":"immersive_design","format":"markdown"}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/analysis_report.py
+
+# Settings
+echo '{"source":"file.codex.yaml"}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/settings.py resolve
+echo '{"path":".","updates":{"analysis":{"report_format":"codex"}}}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/settings.py set
 echo '{"source":"file.codex.yaml","module":"immersive_design","format":"both","force":true}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/analysis_report.py
 
 # Validation

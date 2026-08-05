@@ -5,6 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.0] - 2026-08-05
+
+### Added
+
+- **`.chapterwise/settings.json` — declared project configuration.** What this
+  project does by default, read before anything is asked and written only when
+  the user says so:
+
+  ```json
+  {
+    "version": 1,
+    "analysis": {
+      "report": true,
+      "report_format": "codex",
+      "report_dir": "analysis",
+      "depth": "auto"
+    }
+  }
+  ```
+
+  Resolution, lowest to highest: **plugin defaults → `settings.json` → flags.**
+  A flag wins for that run and is never written back — one `--report=markdown`
+  is not a decision about the project.
+- **The first run offers to save; later runs do not ask.** `settings.py get`
+  returns a `sources` map marking each value `default`, `recipe`, or
+  `settings`. `/analysis` asks only about `default` values, so a configured
+  project is never re-interviewed.
+- **`--report-dir`,** and `analysis.report_dir` behind it. Paths resolve the
+  way codex `include` paths do: `analysis` and `./analysis` sit beside the
+  analyzed file, `/reports` is from the **project root**, `~/…` is literal.
+- **`settings.py`** — `get`, `set`, `resolve`, `defaults` over stdin JSON.
+  `analysis_report.build()` reads settings itself, so calling the script
+  directly gets the same answer the command does.
+
+### Changed
+
+- **The default report format is now `codex`, not `markdown`.** Structured
+  output is the better default for a format-native tool — it re-imports,
+  renders in the web app, and can be analyzed further. `--report=markdown` or
+  `report_format` in settings changes it.
+
+### Fixed
+
+- **A choice saved by an earlier version is not lost.** `report_format`,
+  `report_enabled`, and `depth` left in an older `analysis-recipe` are honoured
+  until a settings file exists, and folded in when one is written. Settings are
+  intent; recipes are run history, and they had been conflated.
+
 ## [2.5.0] - 2026-08-05
 
 ### Added

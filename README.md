@@ -20,6 +20,7 @@ A complete writing toolkit for Claude Code. Import a manuscript from almost any 
   - [The Codex format](#the-codex-format)
   - [Codex Lite](#codex-lite)
   - [Project layout](#project-layout)
+  - [Settings](#settings)
   - [Saved configuration and staleness](#saved-configuration-and-staleness)
   - [Preferences](#preferences)
 - [Command reference](#command-reference)
@@ -215,7 +216,9 @@ my-novel/
 │   ├── style.css
 │   └── manifest.json
 ├── chapter-01-arrival.analysis.json    # written by /analysis, sits beside its chapter
-└── .chapterwise/             # saved config — see below
+└── .chapterwise/             # settings + saved run config — see below
+    ├── settings.json         # what this project does by default
+    └── analysis-recipe/      # what the last run actually did
 ```
 
 `index.codex.yaml` holds gitignore-style `patterns.include` / `patterns.exclude` discovery rules, a `display` block (`defaultView`, `sortBy`, `groupBy`), per-type `typeStyles` (emoji and color), and optionally an explicit `children` tree.
@@ -225,9 +228,50 @@ Two rules worth internalizing:
 - **Never create `.index.codex.yaml`** (leading dot). That's a system-generated cache. You create `index.codex.yaml`.
 - **Status does not inherit.** A folder marked `published` does not publish its children. Every item sets its own `status`, defaulting to `private`.
 
+### Settings
+
+`.chapterwise/settings.json` is what this project does by default. It is read before
+anything is asked and written only when you say so — the first real run offers to save
+what you just chose, and once the file exists you are never asked again.
+
+```json
+{
+  "version": 1,
+  "analysis": {
+    "report": true,
+    "report_format": "codex",
+    "report_dir": "analysis",
+    "depth": "auto"
+  }
+}
+```
+
+| Key | Default | Meaning |
+|---|---|---|
+| `analysis.report` | `true` | Export a report at all |
+| `analysis.report_format` | `codex` | `markdown`, `codex`, or `both` |
+| `analysis.report_dir` | `analysis` | Where reports go, relative to the analyzed file |
+| `analysis.depth` | `auto` | Which nodes get their own pass |
+
+**Resolution, lowest to highest: plugin defaults → `settings.json` → flags.** A flag wins
+for that run and is never written back — `--report=markdown` once is not a decision about
+the project.
+
+`report_dir` resolves the way codex `include` paths do, so there is one rule to learn:
+
+| Value | Resolves to |
+|---|---|
+| `analysis`, `./analysis` | beside the analyzed file — the default |
+| `/reports` | from the **project root**, not the filesystem root |
+| `~/Documents/reports` | a literal path on your machine |
+
+Edit the file by hand, or let the command write it. Commit it — it is a statement about
+the project, not a cache.
+
 ### Saved configuration and staleness
 
-The first time you run `/import`, `/analysis`, `/atlas`, or `/reader`, the plugin saves how you configured it under `.chapterwise/`. Every subsequent run reads that config back, so it never re-interviews you and never redoes finished work.
+Settings are *intent*. The `*-recipe` folders next to them are *history* — what a command
+last did, so it is not redone. The first time you run `/import`, `/analysis`, `/atlas`, or `/reader`, the plugin saves how you configured it under `.chapterwise/`. Every subsequent run reads that config back, so it never re-interviews you and never redoes finished work.
 
 Freshness is hash-based. Each analysis records a `sourceHash` of the chapter it read. Re-running compares hashes and skips anything unchanged. This is what makes `/atlas --update` cheap: revise two chapters out of thirty, and only those two get re-analyzed and only the affected atlas sections get re-synthesized.
 
@@ -365,7 +409,8 @@ Pick this when you know the source is a `.scriv` bundle. Pick `/import` for anyt
 | Flag | Effect |
 |---|---|
 | `--depth root\|N\|leaf\|auto\|all` | Resolution — which nodes get their own pass. Comma lists allowed. Default `auto` |
-| `--report[=markdown\|codex\|both]` | Export a readable report. Default `markdown` |
+| `--report[=markdown\|codex\|both]` | Export a readable report. Default from settings, then `codex` |
+| `--report-dir <path>` | Where the report goes. Relative = beside the file, leading `/` = project root |
 | `--no-report` | Analyze only, no export |
 | `--report-only` | Re-render a report from stored results — runs no analysis |
 | `--force` | Ignore freshness, re-run, overwrite an existing report |
@@ -383,8 +428,9 @@ a plan with the numbers that justify it, which you accept in one keystroke:
 
 You are asked two things in one prompt — **how deep**, and **what report you want**
 (Markdown, Codex, Both, or none). Both come pre-answered with the proposal, so accepting
-is a keystroke. Any flag you pass suppresses its question, so the command stays
-scriptable.
+is a keystroke. Afterwards it offers to save those answers as the project's defaults; say
+yes and it never asks again. Anything already in [settings](#settings) is not asked at
+all, and any flag you pass suppresses its question — so the command stays scriptable.
 
 Results are written to `{manuscript}.analysis.json` beside the source, keeping up to
 three historical entries per module *per scope*. Your manuscript files are never
@@ -422,7 +468,8 @@ collaborator, export a report:
 /analysis immersive_design show.codex.yaml --depth root,leaf --report=markdown
 ```
 
-Reports land in an `analysis/` folder beside the source, next to `atlas/` and `reader/`:
+Reports land in an `analysis/` folder beside the source, next to `atlas/` and `reader/` —
+`analysis.report_dir` in [settings](#settings) moves them:
 
 ```
 Chrysalis/
@@ -433,14 +480,18 @@ Chrysalis/
     └── chrysalis-dome-show-script-immersive-design-2026-08-04.codex.yaml
 ```
 
-**Markdown, Codex, or both — you are asked at runtime**, and the answer is remembered
-for next time:
+**Markdown, Codex, or both — you are asked at runtime**, and offered as a saved default
+afterwards:
 
 | Format | What you get |
 |---|---|
 | `markdown` | A Codex Lite document — frontmatter plus readable prose. What most writers want |
 | `codex` | Structured `.codex.yaml` mirroring your source tree. Re-imports, renders in the web app, can be analyzed further |
 | `both` | Both files, one stem. No extra cost — see below |
+
+Codex is the default. It re-imports, renders in the web app, and can be analyzed further;
+`--report=markdown` is one flag away, and `report_format` in
+[settings](#settings) changes it for good.
 
 The report is assembled **deterministically from the stored results** — it never calls a
 model, so regenerating costs nothing and it cannot drift from what was actually analyzed.

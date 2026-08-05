@@ -67,7 +67,8 @@ class TestOrdering:
             ROOT_SCOPE, 'node:beat-a', 'node:beat-b', 'node:beat-c']
 
     def test_markdown_headings_appear_in_show_order(self, show):
-        build({'source': str(show), 'module': MODULE, 'generated': '2026-08-04'})
+        build({'source': str(show), 'module': MODULE, 'format': 'markdown',
+               'generated': '2026-08-04'})
         text = (show.parent / 'analysis' /
                 'show-immersive-design-2026-08-04.md').read_text(encoding='utf-8')
         assert text.index('Opening') < text.index('Rising') < text.index('Climax')
@@ -75,7 +76,8 @@ class TestOrdering:
 
 class TestOutputLocation:
     def test_lands_in_analysis_folder_beside_the_source(self, show):
-        result = build({'source': str(show), 'module': MODULE, 'generated': '2026-08-04'})
+        result = build({'source': str(show), 'module': MODULE, 'format': 'markdown',
+                        'generated': '2026-08-04'})
         out = Path(result['path'])
         assert out.parent == show.parent / 'analysis'
         assert out.name == 'show-immersive-design-2026-08-04.md'
@@ -102,7 +104,7 @@ class TestOutputLocation:
 
 class TestDeterminism:
     def test_regenerating_is_byte_identical(self, show):
-        args = {'source': str(show), 'module': MODULE,
+        args = {'source': str(show), 'module': MODULE, 'format': 'markdown',
                 'generated': '2026-08-04', 'generatedISO': '2026-08-04T00:00:00Z',
                 'force': True}
         a = Path(build(args)['path']).read_bytes()
@@ -120,7 +122,8 @@ class TestDeterminism:
 
 class TestMarkdown:
     def test_includes_summary_body_children_and_metrics(self, show):
-        build({'source': str(show), 'module': MODULE, 'generated': '2026-08-04'})
+        build({'source': str(show), 'module': MODULE, 'format': 'markdown',
+               'generated': '2026-08-04'})
         text = (show.parent / 'analysis' /
                 'show-immersive-design-2026-08-04.md').read_text(encoding='utf-8')
         assert 'Opening summary.' in text
@@ -129,7 +132,8 @@ class TestMarkdown:
         assert '| intensity | 7 |' in text
 
     def test_records_the_model_that_ran(self, show):
-        build({'source': str(show), 'module': MODULE, 'generated': '2026-08-04'})
+        build({'source': str(show), 'module': MODULE, 'format': 'markdown',
+               'generated': '2026-08-04'})
         text = (show.parent / 'analysis' /
                 'show-immersive-design-2026-08-04.md').read_text(encoding='utf-8')
         assert 'claude-opus-5' in text
@@ -157,8 +161,8 @@ class TestStaleAndOrphan:
         add_analysis_result(show, MODULE, {'body': 'newer', 'summary': 'newer'},
                             model='claude-opus-5', scope='node:beat-a',
                             scope_name='Opening', scope_depth=2)
-        build({'source': str(show), 'module': MODULE, 'generated': '2026-08-04',
-               'force': True})
+        build({'source': str(show), 'module': MODULE, 'format': 'markdown',
+               'generated': '2026-08-04', 'force': True})
         text = (show.parent / 'analysis' /
                 'show-immersive-design-2026-08-04.md').read_text(encoding='utf-8')
         assert 'newer' in text
@@ -170,7 +174,7 @@ class TestStaleAndOrphan:
         doc['children'][0]['children'] = [doc['children'][0]['children'][0]]
         show.write_text(yaml.safe_dump(doc, sort_keys=False), encoding='utf-8')
 
-        result = build({'source': str(show), 'module': MODULE,
+        result = build({'source': str(show), 'module': MODULE, 'format': 'markdown',
                         'generated': '2026-08-04', 'force': True})
         assert 'node:beat-b' in result['scopes']
         text = Path(result['path']).read_text(encoding='utf-8')
@@ -219,7 +223,7 @@ class TestHeadingDeduplication:
              'children': [{'name': 'Motion Budget',
                            'content': '## Motion Budget\n\nThe budget.'}]},
             model='claude-opus-5')
-        result = build({'source': str(show), 'module': 'dupe',
+        result = build({'source': str(show), 'module': 'dupe', 'format': 'markdown',
                         'generated': '2026-08-04', 'force': True})
         text = Path(result['path']).read_text(encoding='utf-8')
         assert text.count('Motion Budget') == 1
@@ -231,7 +235,7 @@ class TestHeadingDeduplication:
             {'body': 'Body.', 'summary': 'S.',
              'children': [{'name': 'Effects in Play', 'content': 'Just prose.'}]},
             model='claude-opus-5')
-        result = build({'source': str(show), 'module': 'plain',
+        result = build({'source': str(show), 'module': 'plain', 'format': 'markdown',
                         'generated': '2026-08-04', 'force': True})
         text = Path(result['path']).read_text(encoding='utf-8')
         assert 'Effects in Play' in text and 'Just prose.' in text
@@ -244,7 +248,7 @@ class TestHeadingDeduplication:
              'children': [{'name': 'Comfort & Load',
                            'content': '## Something Else\n\nText.'}]},
             model='claude-opus-5')
-        result = build({'source': str(show), 'module': 'diff',
+        result = build({'source': str(show), 'module': 'diff', 'format': 'markdown',
                         'generated': '2026-08-04', 'force': True})
         text = Path(result['path']).read_text(encoding='utf-8')
         assert 'Comfort & Load' in text and 'Something Else' in text
@@ -279,7 +283,7 @@ class TestBothFormats:
         assert result['status'] == 'written' and len(result['paths']) == 2
 
     def test_single_format_still_reports_one_path(self, show):
-        result = build({'source': str(show), 'module': MODULE,
+        result = build({'source': str(show), 'module': MODULE, 'format': 'markdown',
                         'generated': '2026-08-04'})
         assert result['paths'] == [result['path']]
 
@@ -331,7 +335,7 @@ class TestFormatAuthority:
         assert all(v4.match(c['id']) for c in doc['children'])
 
     def test_markdown_report_is_validated_too(self, show):
-        result = build({'source': str(show), 'module': MODULE,
+        result = build({'source': str(show), 'module': MODULE, 'format': 'markdown',
                         'generated': '2026-08-04', 'force': True})
         assert result['valid'] is True and result['issues'] == []
 
@@ -350,7 +354,7 @@ class TestCodexLiteFrontmatter:
     """The markdown report is a Codex Lite document, not loose markdown."""
 
     def _text(self, show):
-        build({'source': str(show), 'module': MODULE,
+        build({'source': str(show), 'module': MODULE, 'format': 'markdown',
                'generated': '2026-08-04', 'force': True})
         return (show.parent / 'analysis' /
                 'show-immersive-design-2026-08-04.md').read_text(encoding='utf-8')
