@@ -18,7 +18,7 @@ plugins/chapterwise/
 
 ## Core Principles
 
-1. **LLM Judgment, User Override** — Agent decides, user overrides. Cascade: plugin defaults → `.claude/chapterwise.local.md` → command variant → prompt language.
+1. **LLM Judgment, User Override** — Agent decides, user overrides. Cascade: plugin defaults → `.chapterwise/settings.json` → command variant → prompt language.
 2. **Clean Defaults, Rich Options** — Zero config first run.
 3. **Data Over Flare** — Progress messages include real data, no theatrical language. See `references/language-rules.md`.
 
@@ -29,7 +29,7 @@ plugins/chapterwise/
 - **Never say "recipe" to the user** — internal system only.
 - **Cooking verbs** — scan, slice, source, distill, gather, assemble. Action verbs with technical nouns and real data.
 - **Validation after output** — run `codex_validator.py` after generating codex, silent on success.
-- **User preferences** in `.claude/chapterwise.local.md` (user's project, not this repo).
+- **Project settings** in `.chapterwise/settings.json` (user's project, not this repo). One section per command — `analysis`, `atlas`, `reader`, `research`. Read and write via `scripts/settings.py`, never by hand-parsing.
 
 ## Brand Voice
 
@@ -69,6 +69,8 @@ After implementing any plan:
 5. Update `../../.claude/STATUS.md` and `../../plans/exec-order.md`
 
 ## Recent Changes
+
+- **2026-08-05** — v2.9.0. One configuration surface. `/research` kept its preferences in `.claude/chapterwise.local.md` — a second config file in a different format (markdown frontmatter) with its own key vocabulary, for one command. Retired: research is now a `.chapterwise/settings.json` section like the rest, with `default_depth` → `depth` and `output_path` → `output_dir` so key names mean the same thing everywhere, and both values validated at write time. `references/principles.md` documents the cascade in terms of `settings.json`/`settings.py`; the cascade itself is unchanged (plugin defaults → settings → command variant → prompt language, prompt language still winning for one run without mutating what is saved). Research output stays under `.chapterwise/` on purpose — it is material consulted *while* writing, unlike atlases, readers and analysis reports which are derived *from* the manuscript. Guards assert no doc still points at the retired file and that the sections documented in `principles.md` match `DEFAULTS` in code.
 
 - **2026-08-05** — v2.8.0. Settings extended past `/analysis` to `/atlas` and `/reader` — one `.chapterwise/settings.json`, one section per command, rather than a config surface per command. `settings.py resolve` takes a `section` and returns that section's values with paths already resolved plus a scoped `sources`/`configured`; configuring one section leaves the others asking. Both commands now skip their question when a value is configured (`/atlas` its structure question, `/reader` template selection) and offer once to save after a first successful build. Output paths know what they belong to: an analysis report resolves relative to the manuscript it describes, an atlas and a reader relative to the project root, since those are built once for the project. `reader.template` and `reader.theme` are validated at write time. Choices left in older `reader-recipe` (`design.template`, `design.theme`) and `atlas-recipe` (`sections`) are honoured and folded forward. `/research` still keeps its preferences in `.claude/chapterwise.local.md` — a separate older surface, not folded in.
 

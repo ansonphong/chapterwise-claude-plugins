@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.9.0] - 2026-08-05
+
+### Changed
+
+- **One configuration surface.** `/research` kept its preferences in
+  `.claude/chapterwise.local.md` — a second config file, in a different format
+  (markdown frontmatter), with its own key vocabulary, for one command. It is
+  retired. Research is a section in `.chapterwise/settings.json` like
+  everything else:
+
+  ```json
+  { "research": { "output_dir": ".chapterwise/research",
+                  "format": "codex-md", "depth": "standard" } }
+  ```
+
+- **Key names are consistent across sections.** `default_depth` → `depth`
+  (matching `analysis.depth`), `output_path` → `output_dir` (matching atlas and
+  reader), and the null-means-default sentinel is replaced by a real default.
+- `research.format` and `research.depth` are validated at write time, like the
+  reader's.
+- `references/principles.md` now documents the preference cascade in terms of
+  `settings.json` and `settings.py`. The cascade itself is unchanged: plugin
+  defaults → settings → command variant → prompt language, and prompt language
+  still wins for one run without changing what is saved.
+
+### Added
+
+- A guard asserting no command or doc still points at the retired file, and one
+  asserting the sections documented in `principles.md` match `DEFAULTS` in code.
+
+### Note
+
+Research output stays under `.chapterwise/` deliberately. It is reference
+material consulted *while* writing; atlases, readers and analysis reports are
+derived *from* the manuscript, which is why those sit in visible folders.
+
 ## [2.8.0] - 2026-08-05
 
 ### Added

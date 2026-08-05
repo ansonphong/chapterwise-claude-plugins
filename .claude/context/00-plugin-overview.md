@@ -42,4 +42,4 @@ Recipes track state across multi-step operations (import, analysis, atlas, reade
 
 ## User Preferences
 
-Per-project preferences stored in `.claude/chapterwise.local.md` (YAML frontmatter + markdown notes) in the user's project. Read at command start; created on first use.
+Per-project settings stored in `.chapterwise/settings.json` in the user's project — one section per command (`analysis`, `atlas`, `reader`, `research`). Read at command start via `scripts/settings.py`; written only when the user chooses to save.

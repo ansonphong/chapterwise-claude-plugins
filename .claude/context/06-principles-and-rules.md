@@ -2,7 +2,7 @@
 
 ## Three Core Principles
 
-1. **LLM Judgment, User Override** -- The agent makes intelligent decisions about structure, depth, and format, but always yields to explicit user preferences. Preference cascade (later wins): plugin defaults, `.claude/chapterwise.local.md`, command variant, prompt language.
+1. **LLM Judgment, User Override** -- The agent makes intelligent decisions about structure, depth, and format, but always yields to explicit user preferences. Preference cascade (later wins): plugin defaults, `.chapterwise/settings.json`, command variant, prompt language.
 
 2. **Clean Defaults, Rich Options** -- Commands work with zero configuration. First run produces useful output. Power users customize via preferences, flags, and natural language.
 
@@ -21,14 +21,18 @@
 
 Recipes are state-tracking folders at `.chapterwise/<type>-recipe/` in the user's project. Types: import, analysis, atlas, reader. Managed by `recipe_manager.py` (create/load/list/validate/update). Validated by `recipe_validator.py` after every save. The recipe concept is never exposed to users.
 
-## User Preferences
+## Project Settings
 
-Stored in `.claude/chapterwise.local.md` in the user's project (not the plugin repo):
-- YAML frontmatter for structured config (per-command sections)
-- Markdown body for freeform project notes
-- Created on first use if absent
-- Only sections for used commands are added
-- Override vs mutate: prompt overrides apply once; explicit "always use X" updates the file
+Stored in `.chapterwise/settings.json` in the user's project (not the plugin repo). One JSON file, one section per command (`analysis`, `atlas`, `reader`, `research`), read and written via `scripts/settings.py` — never hand-parsed.
+
+- `resolve` returns a section's values with paths already resolved, plus `found` and a `sources` map marking each value `settings`, `recipe`, or `default`
+- A value from `settings` or `recipe` is never a question; commands ask only about `default` values
+- Written only when the user chooses to save — reading never writes, and a one-off flag is never persisted
+- Offered once per project, not once per run
+- Path values resolve like codex `include` paths: bare/`./` relative, leading `/` from the project root, `~` literal. Analysis report dirs are file-relative; atlas, reader and research are project-relative
+- Override vs mutate: prompt overrides apply once; explicit "always use X" writes the setting
+
+**Settings are intent; `*-recipe` folders are history.** The older markdown-frontmatter preference file that `/research` used is retired — there is one configuration surface, and this is it. See `scripts/settings.py` for the migration note.
 
 ## Modular Rules (`.claude/rules/`)
 

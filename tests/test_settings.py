@@ -371,7 +371,7 @@ class TestAtlasAndReaderSections:
     """
 
     def test_defaults_exist_for_every_section(self):
-        assert set(DEFAULTS) == {'version', 'analysis', 'atlas', 'reader'}
+        assert set(DEFAULTS) == {'version', 'analysis', 'atlas', 'reader', 'research'}
         assert DEFAULTS['atlas']['output_dir'] == 'atlas'
         assert DEFAULTS['reader']['output_dir'] == 'reader'
         assert DEFAULTS['reader']['template'] == 'minimal'
@@ -478,3 +478,92 @@ class TestAtlasAndReaderCommandsObeySettings:
     def test_the_command_does_not_ask_what_is_configured(self, command):
         doc = (self.COMMANDS / f'{command}.md').read_text(encoding='utf-8')
         assert 'never ask' in doc.lower() or 'do not ask' in doc.lower()
+
+
+class TestResearchSection:
+    """
+    Research had its own preference file in its own format.
+
+    `.claude/chapterwise.local.md` was a second configuration surface — YAML
+    frontmatter, different keys, different folder — for one command. It is
+    retired; research is a section like everything else.
+    """
+
+    def test_research_has_defaults(self):
+        assert DEFAULTS['research'] == {
+            'output_dir': '.chapterwise/research',
+            'format': 'codex-md',
+            'depth': 'standard',
+        }
+
+    def test_every_section_uses_the_same_key_vocabulary(self):
+        """output_dir and depth mean the same thing wherever they appear."""
+        for section in ('atlas', 'reader', 'research'):
+            assert 'output_dir' in DEFAULTS[section], section
+        for section in ('analysis', 'research'):
+            assert 'depth' in DEFAULTS[section], section
+
+    def test_research_output_is_project_relative(self, project):
+        root, src = project
+        result = action_resolve({'source': str(src), 'section': 'research'})
+        assert result['output_dir'] == str(root / '.chapterwise' / 'research')
+
+    def test_research_stays_under_chapterwise_by_default(self):
+        """Research is an input consulted while writing, not a deliverable."""
+        assert DEFAULTS['research']['output_dir'].startswith('.chapterwise/')
+        for section in ('analysis', 'atlas', 'reader'):
+            value = DEFAULTS[section].get('output_dir') or DEFAULTS[section]['report_dir']
+            assert not value.startswith('.chapterwise'), section
+
+    def test_research_format_is_validated(self, project):
+        _root, src = project
+        with pytest.raises(ValueError, match='research.format'):
+            action_set({'path': str(src), 'updates': {'research': {'format': 'pdf'}}})
+
+    def test_research_depth_is_validated(self, project):
+        _root, src = project
+        with pytest.raises(ValueError, match='research.depth'):
+            action_set({'path': str(src), 'updates': {'research': {'depth': 'shallow'}}})
+
+    def test_research_round_trips(self, project):
+        _root, src = project
+        action_set({'path': str(src), 'updates': {'research': {'format': 'codex-json',
+                                                              'depth': 'deep'}}})
+        result = action_resolve({'source': str(src), 'section': 'research'})
+        assert result['format'] == 'codex-json' and result['depth'] == 'deep'
+        assert result['configured'] == ['research.format', 'research.depth']
+
+
+class TestOneConfigurationSurface:
+    """`.claude/chapterwise.local.md` is retired — one file, or it isn't consistent."""
+
+    ROOT = Path(__file__).parent.parent
+
+    def _text_files(self):
+        for pattern in ('README.md', 'CLAUDE.md', 'plugins/chapterwise/commands/*.md',
+                        'plugins/chapterwise/references/*.md', '.claude/context/*.md'):
+            for path in self.ROOT.glob(pattern):
+                yield path
+
+    def test_no_command_or_doc_still_points_at_the_old_file(self):
+        offenders = [str(p.relative_to(self.ROOT)) for p in self._text_files()
+                     if 'chapterwise.local.md' in p.read_text(encoding='utf-8')
+                     and 'v2.8.0' not in p.read_text(encoding='utf-8')]
+        assert offenders == [], offenders
+
+    def test_the_research_command_reads_settings(self):
+        doc = (self.ROOT / 'plugins' / 'chapterwise' / 'commands' /
+               'research.md').read_text(encoding='utf-8')
+        assert 'settings.py resolve' in doc and '"section": "research"' in doc
+        assert 'settings.py set' in doc
+
+    def test_the_principles_reference_names_settings_json(self):
+        doc = (self.ROOT / 'plugins' / 'chapterwise' / 'references' /
+               'principles.md').read_text(encoding='utf-8')
+        assert '.chapterwise/settings.json' in doc
+
+    def test_every_documented_section_exists_in_code(self):
+        doc = (self.ROOT / 'plugins' / 'chapterwise' / 'references' /
+               'principles.md').read_text(encoding='utf-8')
+        block = doc.split('```json', 1)[1].split('```', 1)[0]
+        assert set(json.loads(block)) == set(DEFAULTS)

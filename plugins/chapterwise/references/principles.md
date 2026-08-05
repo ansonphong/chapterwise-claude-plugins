@@ -13,7 +13,7 @@ The agent makes intelligent, organic decisions about structure, depth, organizat
 Priority (later overrides earlier):
 
 1. **Plugin defaults** — Sane out-of-the-box behavior hardcoded in the command definition
-2. **`.claude/chapterwise.local.md`** — Persistent per-project preferences (YAML frontmatter)
+2. **`.chapterwise/settings.json`** — Persistent per-project settings, one section per command
 3. **Command variant** — e.g., `/research` vs `/research:deep`
 4. **Prompt language** — Always wins. Natural language in the user's prompt overrides everything.
 
@@ -25,18 +25,18 @@ Priority (later overrides earlier):
 - **Web search:** The agent decides whether to search the web based on topic type — but if the user says "use web sources" or "no web", obey.
 - **Structure:** The agent decides single-file vs multi-file based on topic — but if the user specifies structure ("one section per god", "flat list"), obey.
 
-### When Preferences Don't Exist Yet
+### When Settings Don't Exist Yet
 
-If a command needs a preference that isn't set in `.claude/chapterwise.local.md`:
+If a command needs a value that isn't in `.chapterwise/settings.json`:
 
 1. Apply a sensible default silently (Principle 2 — Clean Defaults)
-2. Save the applied default to `.claude/chapterwise.local.md` after the command completes
-3. The user can change it later by asking or editing the file directly
+2. **Offer once**, after the command completes, to save what was used
+3. Never ask again — a value whose `sources` entry is `settings` is settled
 
 ### Override vs Mutate
 
-- **Prompt override:** User says "output this one as JSON" → obey for this invocation, do NOT change saved preference
-- **Explicit preference change:** User says "always use JSON from now on" → update `.claude/chapterwise.local.md`
+- **Prompt override:** User says "output this one as JSON" → obey for this invocation, do NOT change the setting
+- **Explicit change:** User says "always use JSON from now on" → write it with `settings.py set`
 
 ---
 
@@ -52,31 +52,45 @@ Every progress message, completion report, and status update includes real data 
 
 ---
 
-## Preference Storage: `.claude/chapterwise.local.md`
+## Settings Storage: `.chapterwise/settings.json`
 
-This is the per-project preferences file for all ChapterWise commands. It uses the Claude Code plugin-settings pattern: YAML frontmatter for structured config, markdown body for freeform notes. Claude reads it automatically in context.
+The single per-project configuration file for every ChapterWise command. One file, one
+section per command, so a project has one place to look rather than one per command.
 
-**Location:** `.claude/chapterwise.local.md` (in the user's project, not the plugin)
+**Location:** `.chapterwise/settings.json` (in the user's project, not the plugin)
 
-**Format:**
-
-```markdown
----
-research:
-  format: codex-md
-  default_depth: standard
-  output_path: null
----
-
-## ChapterWise Project Notes
-
-Freeform notes about this project that persist across sessions.
+```json
+{
+  "version": 1,
+  "analysis": { "report": true, "report_format": "codex", "report_dir": "analysis", "depth": "auto" },
+  "atlas":    { "output_dir": "atlas", "sections": ["characters", "timeline", "themes",
+                                                   "plot-structure", "locations", "relationships"] },
+  "reader":   { "output_dir": "reader", "template": "minimal", "theme": "light" },
+  "research": { "output_dir": ".chapterwise/research", "format": "codex-md", "depth": "standard" }
+}
 ```
 
-Note: The `---` delimiters contain YAML only — no markdown headings or `#` comments that could be confused with markdown. Section headers belong in the markdown body below the closing `---`.
+**Read and write it through `scripts/settings.py`,** never by hand-parsing:
+
+```bash
+echo '{"path": ".", "section": "reader"}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/settings.py resolve
+echo '{"path": ".", "updates": {"reader": {"theme": "dark"}}}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/settings.py set
+```
+
+`resolve` returns the section's values with paths already resolved, plus `found` and a
+`sources` map marking each value `settings`, `recipe`, or `default`.
+
+**Path values resolve the way codex `include` paths do** — bare and `./` are relative,
+a leading `/` is the **project root**, `~` is a literal path. What "relative" means depends
+on what the artifact belongs to: an analysis report sits beside the manuscript it
+describes, while an atlas, a reader and research are per-project.
 
 **Rules:**
-- Create the file on first use if it doesn't exist
-- Only add sections for commands that have been used
-- Never remove user-written notes from the markdown body
-- Read this file at the start of every command execution
+- Read settings before asking anything
+- A value from `settings` or `recipe` is never a question
+- Write only what the user chose — never persist a one-off flag
+- Offer to save once per project, not once per run
+- Create the file only when the user says to save; reading never writes
+
+**Settings are intent. `*-recipe` folders are history** — what a command last did, so work
+is not redone. Keep them separate.

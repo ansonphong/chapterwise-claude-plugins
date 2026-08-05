@@ -39,42 +39,47 @@ If the user references their manuscript or specific chapters, set context to `ma
 
 ---
 
-### Step 2: Load Preferences
+### Step 2: Load Settings
 
-Read `.claude/chapterwise.local.md` from the project root (not the plugin root).
-
-Look for the `research` section in the YAML frontmatter:
-
-```yaml
-research:
-  format: codex-md          # codex-md | codex-json
-  default_depth: standard   # standard | deep
-  output_path: null          # null = default
+```bash
+echo '{"path": ".", "section": "research"}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/settings.py resolve
 ```
 
-If the file doesn't exist or has no `research` section, proceed to Step 3 (first-run flow).
+Returns `format`, `depth`, and `output_dir` (already an absolute path), plus `found` and a
+`sources` map.
 
-If preferences exist, apply them as defaults (prompt language still overrides).
+| Key | Default | Meaning |
+|---|---|---|
+| `research.format` | `codex-md` | `codex-md` or `codex-json` |
+| `research.depth` | `standard` | `standard` or `deep` |
+| `research.output_dir` | `.chapterwise/research` | Relative to the **project root** |
+
+Research output stays under `.chapterwise/` on purpose: it is reference material consulted
+*while* writing, not a deliverable derived *from* the manuscript. Atlases, readers and
+analysis reports are the latter, which is why those sit in visible folders.
+
+`sources` marks each value `settings` or `default`. Prompt language still overrides
+everything, for this invocation only.
 
 ---
 
 ### Step 3: Apply Defaults (First Run)
 
-If no `research.format` preference exists, default to `codex-md` silently. Do NOT ask the user — this follows Principle 2 (Clean Defaults). The first run should produce useful output without requiring preferences.
+If nothing is configured, use the defaults **silently**. Do NOT ask — this follows
+Principle 2 (Clean Defaults); the first run should produce useful output without an
+interview.
 
-After the research completes (Step 9), save the applied defaults to `.claude/chapterwise.local.md`. Create the file if it doesn't exist. If the file exists, add the `research` section to the frontmatter without disturbing existing content.
+After the research completes (Step 9), if `found` was `false`, offer once to save:
 
-The minimal frontmatter to write:
+> "Save these as this project's defaults? Codex Markdown, standard depth."
 
-```yaml
----
-research:
-  format: codex-md
-  default_depth: standard
----
+```bash
+echo '{"path": ".", "updates": {"research": {"format": "codex-md", "depth": "standard"}}}' \
+  | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/settings.py set
 ```
 
-The user can change preferences later by asking ("always use JSON from now on") or by editing the file directly.
+A one-off override — "output this one as JSON" — is obeyed for that run and **never**
+written back. "Always use JSON from now on" is the sentence that changes the setting.
 
 ---
 

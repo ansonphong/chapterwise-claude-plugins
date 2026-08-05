@@ -255,6 +255,11 @@ command:
     "output_dir": "reader",
     "template": "minimal",
     "theme": "light"
+  },
+  "research": {
+    "output_dir": ".chapterwise/research",
+    "format": "codex-md",
+    "depth": "standard"
   }
 }
 ```
@@ -270,10 +275,17 @@ command:
 | `reader.output_dir` | `reader` | Where the reader is built, relative to **the project root** |
 | `reader.template` | `minimal` | `minimal`, `academic`, or `custom` |
 | `reader.theme` | `light` | Which theme the reader opens in |
+| `research.output_dir` | `.chapterwise/research` | Where research lands, relative to **the project root** |
+| `research.format` | `codex-md` | `codex-md` or `codex-json` |
+| `research.depth` | `standard` | `standard` or `deep` |
 
-An analysis report belongs beside the manuscript it describes; an atlas and a reader are
-built once for the whole project. That is why the first is file-relative and the other
-two are project-relative.
+An analysis report belongs beside the manuscript it describes; an atlas, a reader and
+research are per-project. That is why the first is file-relative and the rest are
+project-relative.
+
+Research stays under `.chapterwise/` on purpose: it is material consulted *while* writing.
+Atlases, readers and analysis reports are derived *from* the manuscript, so they sit in
+visible folders you commit and hand to collaborators.
 
 Sections are independent. Configuring the reader does not stop `/atlas` from asking about
 its sections on first run.
@@ -284,11 +296,8 @@ the project.
 
 Settings apply to **every** `/analysis` route — a single file, the course picker, `--plan`,
 and `--all` / `--glob` batches all read them and all export reports. A batch offers to save
-once at the end, not once per file. `/atlas` and `/reader` read their own sections the same
-way.
-
-`/research` still keeps its preferences in `.claude/chapterwise.local.md` — a separate,
-older surface that has not been folded in.
+once at the end, not once per file. `/atlas`, `/reader` and `/research` read their own
+sections the same way.
 
 `report_dir` resolves the way codex `include` paths do, so there is one rule to learn:
 
@@ -312,18 +321,10 @@ Pass `--force` to any analysis run to ignore freshness and redo everything.
 
 ### Preferences
 
-Project-level preferences live in `.claude/chapterwise.local.md` in *your* project (not in the plugin). Currently used by the research commands:
-
-```markdown
----
-research:
-  format: codex-md          # codex-md | codex-json
-  default_depth: standard   # standard | deep
-  output_path: .chapterwise/research/
----
-```
-
-Resolution order, lowest to highest: plugin defaults → `chapterwise.local.md` → command variant → language in your prompt. Nothing is asked on first run that has a sane default.
+There is one preferences file — [`.chapterwise/settings.json`](#settings), above. Resolution
+order, lowest to highest: plugin defaults → `settings.json` → command variant → language in
+your prompt. Nothing is asked on first run that has a sane default, and prompt language
+always wins for that run without changing what is saved.
 
 ---
 

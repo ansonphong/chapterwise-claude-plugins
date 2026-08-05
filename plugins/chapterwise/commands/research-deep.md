@@ -38,7 +38,7 @@ Everything else — preferences, credits, manuscript-awareness, format — works
 
 Follow the exact same command flow as `${CLAUDE_PLUGIN_ROOT}/commands/research.md`, with these overrides:
 
-1. **Depth is locked to `deep`** — When loading preferences in Step 2, skip `research.default_depth`. Depth is set by the command variant (Preference Cascade, priority 3) and cannot be overridden by saved preferences. Only prompt language can override (e.g., "just a quick overview").
+1. **Depth is locked to `deep`** — When loading settings in Step 2, ignore `research.depth`. Depth is set by the command variant (Preference Cascade, priority 3) and cannot be overridden by saved preferences. Only prompt language can override (e.g., "just a quick overview").
 
 2. **Structure defaults to multi-file** — create a folder with:
    - `overview.codex.md` (or `.research.json`) — High-level synthesis, table of contents, key themes

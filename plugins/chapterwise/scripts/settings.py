@@ -59,6 +59,11 @@ DEFAULTS: Dict[str, Any] = {
         'template': 'minimal',
         'theme': 'light',
     },
+    'research': {
+        'output_dir': '.chapterwise/research',
+        'format': 'codex-md',
+        'depth': 'standard',
+    },
 }
 
 VALID = {
@@ -66,6 +71,8 @@ VALID = {
     'analysis.report': (True, False),
     'reader.template': ('minimal', 'academic', 'custom'),
     'reader.theme': ('light', 'dark'),
+    'research.format': ('codex-md', 'codex-json'),
+    'research.depth': ('standard', 'deep'),
 }
 
 # Where each section's output goes, and what it is relative to. An analysis
@@ -75,6 +82,7 @@ OUTPUT_DIRS = {
     'analysis': ('report_dir', 'file'),
     'atlas': ('output_dir', 'project'),
     'reader': ('output_dir', 'project'),
+    'research': ('output_dir', 'project'),
 }
 
 # Settings-shaped keys that earlier versions left in `*-recipe/recipe.yaml`.
@@ -93,6 +101,10 @@ RECIPE_INHERITANCE = {
         'design.theme': 'theme',
     }),
 }
+
+# `/research` kept its preferences in `.claude/chapterwise.local.md`, a second
+# configuration surface in a different format that predated this file. It is
+# retired: research is a section here like everything else.
 
 
 def find_project_root(start: Path) -> Path:
