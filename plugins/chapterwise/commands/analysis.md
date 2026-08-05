@@ -35,6 +35,36 @@ Inspect the arguments and route to the appropriate path:
 | `analysis --plan` | Genre-aware module planning — see Section 5 |
 | `analysis --all [--glob pattern]` | Batch all modules on a file or folder — see Section 6 |
 | `analysis <module> --glob pattern` | Batch a single module across matched files — see Section 6 |
+| `analysis <module> [file] --report-only` | Re-render an existing report — see Step 2i |
+
+### Flags
+
+| Flag | Effect |
+|------|--------|
+| `--depth root\|N\|leaf\|auto\|all` | Resolution. Comma lists allowed: `--depth root,leaf` analyzes the whole file **and** every leaf. Default `auto` |
+| `--report[=markdown\|codex]` | Export a report. Default format `markdown` |
+| `--no-report` | Analyze only, no export |
+| `--report-only` | Re-render the report from stored results; runs no analysis |
+| `--force` | Skip staleness checks and overwrite an existing report |
+| `--dry-run` | Show what would run; write nothing |
+
+**Any flag suppresses its question.** Passing `--depth` and `--report` together runs the
+whole thing without prompting — this command has to be scriptable.
+
+### Resolution
+
+A codex is a tree, and resolution selects which nodes get their own analysis pass. For a
+dome script that is one file holding 9 acts and 36 beats:
+
+| `--depth` | Passes | Meaning |
+|---|---:|---|
+| `root` | 1 | the whole show |
+| `1` | 9 | act by act |
+| `leaf` | 36 | beat by beat |
+| `root,leaf` | 37 | whole-show synthesis **and** every beat |
+
+Results all live in the one `.analysis.json` sibling, tagged by scope, each scope keeping
+its own history.
 
 ---
 
@@ -241,7 +271,58 @@ Use AskUserQuestion:
 
 If `isStale` is `true`, proceed without asking.
 
-### Step 2d: Load module prompt
+### Step 2d: Scan the structure, then propose
+
+**Scan before asking anything.** A manuscript's shape determines what a useful question
+even is, and this is cheap — structure only, never full content.
+
+```bash
+echo '{"path": "SOURCE_FILE"}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/codex_scan.py scan
+```
+
+Returns per-depth counts and types, how many nodes at each level carry content, root
+attributes, and `suggestedDepth` with `suggestedReason`.
+
+If the file is a single node (`totalNodes: 1`), there is nothing to decide — use `root`
+and say nothing. Most chapters are this case.
+
+If it has analyzable structure, **state the shape and propose**, with the numbers that
+justify the proposal:
+
+> Chrysalis — 9 acts, 36 beats, 36:00, Planetarium Dome Show.
+> Suggest whole-show plus beat-by-beat: 37 passes. Report as markdown.
+
+Then one AskUserQuestion with the proposal already selected:
+
+- **Run it** — accept the proposal
+- **Whole show only** — 1 pass
+- **Change depth** — pick a level
+- **No report** — analyze, skip the export
+
+**Do not ask three separate questions.** Per `references/principles.md`, the agent
+decides and the user overrides. A proposal with one keystroke to accept is the shape
+this command is supposed to have.
+
+**Any flag suppresses its question.** If `--depth` is given, do not ask about depth. If
+`--report` or `--no-report` is given, do not ask about the report. If both are given,
+run silently.
+
+Check `.chapterwise/analysis-recipe` first — if `depth` and `report_format` were saved
+from a previous run, offer those as the proposal instead of the scanner's default.
+
+### Step 2e: Resolve the nodes to analyze
+
+```bash
+echo '{"path": "SOURCE_FILE", "depth": "DEPTH"}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/codex_scan.py nodes
+```
+
+`depth` accepts `root`, an integer, `leaf`, `auto`, `all`, or a comma list. `root,leaf`
+is the common choice for a script — whole-show synthesis plus every scene.
+
+Returns each node in document order with `scope`, `name`, `path`, `depth`, `index`, and
+its `content`. Analyze **that content**, not the whole file.
+
+### Step 2f: Load module prompt
 
 Read the module's full prompt content from `_content` field (the body of the module's `.md` file after the frontmatter).
 
@@ -249,33 +330,85 @@ Also read the shared output format partial:
 
 Read the output format spec at `${CLAUDE_PLUGIN_ROOT}/modules/_output-format.md` using the Read tool.
 
-### Step 2e: Run analysis
+### Step 2g: Run analysis
 
-Read the source file content. Apply the module's analytical prompt to the chapter content. Produce a structured result matching the module's specified output format.
+For each node returned by Step 2e, apply the module's prompt to that node's content and
+produce a result matching the module's output format.
+
+**Modules that define more than one output shape select by scope.** `immersive_design`
+is the current example: `scope: root` takes its whole-show shape (arc map, motion
+budget, breath coverage, the landing); `scope: node:*` takes its scene shape (effects in
+play, proposed effects, rhythm and breath, comfort and load). Read the module's own
+Scope section and follow it.
+
+At 3 or more nodes, batch with the Task tool — one agent per group of nodes, per the
+existing convention in Section 6.
 
 If `--dry-run` is set, show what would be analyzed without writing results:
 
-> "Dry run: would analyze {filename} with {module}."
+> "Dry run: {N} nodes, {module}, depth {depth}."
 
 Stop here if dry-run.
 
-### Step 2f: Write results
+### Step 2h: Write results
 
-Pass the analysis result to the writer:
+One writer call per node, carrying that node's scope:
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/analysis_writer.py SOURCE_FILE MODULE_NAME - < RESULT_JSON
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/analysis_writer.py SOURCE_FILE MODULE_NAME - \
+  --model "YOUR_ACTUAL_MODEL" \
+  --scope "node:NODE_ID" --scope-name "NODE_NAME" --scope-path "A › B › C" \
+  --scope-depth N --scope-index I < RESULT_JSON
 ```
 
-The writer saves results to `{source_basename}.analysis.json` in the same directory as the source file, using Codex V1.3 format with module history.
+For a whole-file analysis, omit every `--scope*` flag.
 
-### Step 2g: Report
+All results go into the one `{source_basename}.analysis.json` sibling. Each scope keeps
+its own history, so analyzing beat 12 never touches beat 11.
 
-After writing:
+**`--model` is required of you.** Report the model you actually are. It is a provenance
+record — an unreported model is written as `unknown`, which is honest; a wrong name is
+not. Never copy the example.
 
-> "Done. {module} analysis saved."
+### Step 2i: Export the report
 
-Or if part of a batch, just proceed without per-file output (progress is reported at batch level).
+Skip if the user declined or `--no-report` was passed.
+
+```bash
+echo '{"source": "SOURCE_FILE", "module": "MODULE_NAME", "format": "markdown"}' \
+  | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/analysis_report.py
+```
+
+`format` is `markdown` or `codex`, whichever the user chose. The report is assembled
+from what was just written to `.analysis.json` — it re-reads from disk and never calls a
+model, so it costs nothing and cannot drift from the stored results.
+
+Lands in `{source_dir}/analysis/{slug}-{module}-{YYYY-MM-DD}.{md|codex.yaml}`.
+
+If the script returns `"status": "exists"`, ask before overwriting:
+
+> "Report already exists: {path} — overwrite?"
+
+Re-run with `"force": true` if the user agrees.
+
+`--report-only` runs this step alone, with no analysis. Use it to regenerate a report or
+switch format without spending anything.
+
+### Step 2j: Save the choice
+
+Persist so it is asked once, not every run:
+
+```bash
+echo '{"recipe_path": ".chapterwise/analysis-recipe", "updates": {"depth": "DEPTH", "report_format": "FORMAT", "report_enabled": true}}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/recipe_manager.py update
+```
+
+Save silently.
+
+### Step 2k: Confirm
+
+> "Done. {module}, {N} passes — 1 show, 36 beats. Report: {path}"
+
+Or if part of a batch, proceed without per-file output (progress is reported at batch level).
 
 ---
 
@@ -615,6 +748,9 @@ Follow `${CLAUDE_PLUGIN_ROOT}/references/language-rules.md` for all shared messa
 | Simmering course | Simmering | "Simmering thematic analysis... emotions, Jungian, relationships." |
 | Immersive course | Mapping | "Mapping immersive design... effects, rhythm, comfort on 28 chapters." |
 | Parallel execution | Running in parallel | "Running in parallel... done." |
+| Scan structure | Scanning | "Scanning structure... 9 acts, 36 beats, 36:00." |
+| Per-node analysis | Running | "Running immersive_design... 1 show, 36 beats." |
+| Report export | Writing | "Writing report... analysis/chrysalis-immersive-design-2026-08-04.md" |
 | Done | Done | "Done. 18 modules across 28 chapters." |
 
 **Course names are the only branded cooking names.** Progress messages within a course use plain technical descriptions.
@@ -640,7 +776,15 @@ echo '{"recipe_path":".chapterwise/analysis-recipe","updates":{}}' | python3 ${C
 python3 ${CLAUDE_PLUGIN_ROOT}/scripts/staleness_checker.py path/to/file.codex.yaml module_name
 
 # Writing results
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/analysis_writer.py path/to/file.codex.yaml module_name - < result.json
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/analysis_writer.py path/to/file.codex.yaml module_name - \
+  --model "your-actual-model" --scope "node:UUID" --scope-name "Beat name" --scope-index 3 < result.json
+
+# Structural scan and node resolution
+echo '{"path":"file.codex.yaml"}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/codex_scan.py scan
+echo '{"path":"file.codex.yaml","depth":"root,leaf"}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/codex_scan.py nodes
+
+# Report export
+echo '{"source":"file.codex.yaml","module":"immersive_design","format":"markdown"}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/analysis_report.py
 
 # Validation
 echo '{"recipe_path":".chapterwise/analysis-recipe"}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/recipe_validator.py
