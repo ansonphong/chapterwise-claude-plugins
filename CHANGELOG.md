@@ -5,6 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-08-04
+
+### Added
+
+- **Codex V1.3 support** across schemas, scripts, and commands. The plugin had been
+  emitting V1.2 while the published spec moved to V1.3.
+- **Content array documentation in `/format`** — the command that formats arbitrary
+  documents now knows the V1.3 content array: item fields, the `text` / `blockquote` /
+  `diagram` / `spreadsheet` types, `width` layout, and the extended include resolver.
+  Previously `width` and the new content types were documented only inside `/diagram`
+  and `/spreadsheet`, so `/format` never emitted them.
+- **`scripts/codex_version.py`** — single source of truth for `CURRENT_FORMAT_VERSION`
+  and `SUPPORTED_FORMAT_VERSIONS`. Every script that stamps a `formatVersion` now
+  imports it instead of hardcoding a literal.
+- **`tests/test_codex_version.py`** — 26 tests covering version constants, V1.3 schema
+  acceptance (content arrays, widths, include extensions), auto-fixer version handling,
+  and a drift guard that fails the build if any script hardcodes a version stamp again.
+
+### Fixed
+
+- **Auto-fixer silently downgraded V1.3 documents.** `_ensure_v1_metadata` rewrote any
+  `formatVersion` outside `['1.0','1.1','1.2']` to `'1.2'`, so a valid V1.3 file was
+  quietly reverted on every run. It now recognizes 1.3, and never rewrites a document
+  that already declares a supported version — the fixer repairs integrity, it does not
+  migrate between versions.
+- **Codex schema rejected valid V1.3 files.** The `formatVersion` enum capped at `1.2`.
+- **`scrivener_file_writer.py` stamped `formatVersion: "2.1"`** on generated
+  `.index.codex.yaml` files — the plugin's own version number, not a codex format
+  version, and not a valid value under any spec revision.
+
+### Changed
+
+- Schemas renamed to track the spec they implement: `codex-v1.3.schema.json`,
+  `analysis-v1.3.schema.json`, `research-v1.3.schema.json`. `schema_validator.py` and
+  all docs updated. Analysis and research schemas accept `1.2` and `1.3` so existing
+  `.analysis.json` files keep validating.
+- Codex schema gained `metadata.iconset`, top-level `key` / `display` / `animation_url`,
+  and V1.3 content-section fields (`width` enum, `include` with diagram and spreadsheet
+  extensions).
+- New documents are stamped `1.3`. Documents declaring `1.0`–`1.2` remain valid and are
+  left as they are.
+
+### Note
+
+`.spreadsheet.yaml` files carry their own independent `formatVersion: "1.0"`, matching
+`chapterwise-web`'s generator. That value is unrelated to the codex spec version and was
+deliberately left alone.
+
 ## [2.1.0] - 2026-08-04
 
 ### Added

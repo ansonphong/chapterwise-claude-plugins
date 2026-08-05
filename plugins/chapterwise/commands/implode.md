@@ -55,7 +55,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/implode_codex.py story.codex.yaml --delete
 **Before (story.codex.yaml with includes):**
 ```yaml
 metadata:
-  formatVersion: "1.2"
+  formatVersion: "1.3"
   exploded:
     timestamp: "2026-01-24T..."
     extracted_count: 2
@@ -80,7 +80,7 @@ children:
 **After (story.codex.yaml - consolidated):**
 ```yaml
 metadata:
-  formatVersion: "1.2"
+  formatVersion: "1.3"
   imploded:
     timestamp: "2026-01-24T..."
     merged_count: 2

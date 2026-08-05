@@ -19,7 +19,7 @@ plugins/chapterwise/
 ├── references/        # principles.md, language-rules.md, insert reference docs
 ├── schemas/           # recipe.schema.yaml
 └── requirements.txt   # Python deps (pyyaml, optional pymupdf/python-docx/bs4)
-schemas/               # Repo-root JSON schemas (codex-v1.2, analysis-v1.2, research-v1.2)
+schemas/               # Repo-root JSON schemas (codex-v1.3, analysis-v1.3, research-v1.3)
 ```
 
 ## Auto-Discovery

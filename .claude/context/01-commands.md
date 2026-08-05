@@ -31,7 +31,7 @@ All commands are markdown files in `commands/` with YAML frontmatter defining `d
 
 | Command | Triggers | Description |
 |---------|----------|-------------|
-| `/format` | codex format/yaml, fix codex, auto-fix | Format content as Codex V1.2 YAML |
+| `/format` | codex format/yaml, fix codex, auto-fix | Format content as Codex V1.3 YAML |
 | `/format-folder` | fix/autofix/format codex folder, batch fix | Auto-fix all codex files in a folder |
 | `/format-regen-ids` | regenerate/regen/new/fresh ids | Regenerate all IDs in a codex file |
 | `/explode` | explode/split/modularize codex, extract children | Split codex into separate child files |

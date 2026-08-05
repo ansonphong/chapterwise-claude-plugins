@@ -1,0 +1,279 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chapterwise.app/schemas/research-v1.3.schema.json",
+  "title": "Codex Research File V1.3",
+  "description": "ChapterWise research file format - .research.json files storing AI-generated research results",
+  "type": "object",
+
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "formatVersion": {
+          "type": "string",
+          "enum": ["1.2", "1.3"],
+          "description": "Codex format version. New research files are written as 1.3; 1.2 remains readable."
+        },
+        "created": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["formatVersion"]
+    },
+    "id": {
+      "type": "string",
+      "description": "Research file ID (topic slug, e.g., 'sumerian-gods')",
+      "pattern": "^[a-zA-Z0-9_-]+$"
+    },
+    "type": {
+      "type": "string",
+      "const": "research",
+      "description": "Root node type is always 'research'"
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name (e.g., 'Sumerian Gods')"
+    },
+    "summary": {
+      "type": "string",
+      "description": "One-line summary of the research"
+    },
+    "body": {
+      "type": "string",
+      "description": "Main research content (markdown)"
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Research tags for searchability"
+    },
+    "attributes": {
+      "type": "array",
+      "description": "Root-level attributes including topic, depth, sources, and context",
+      "items": {
+        "$ref": "#/$defs/attribute"
+      }
+    },
+    "credits": {
+      "$ref": "#/$defs/credits"
+    },
+    "children": {
+      "type": "array",
+      "description": "Research sections and entries",
+      "items": {
+        "$ref": "#/$defs/researchSection"
+      }
+    }
+  },
+
+  "required": ["metadata", "type"],
+
+  "$defs": {
+    "attribute": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "Attribute key"
+        },
+        "value": {
+          "description": "Attribute value"
+        },
+        "dataType": {
+          "type": "string",
+          "description": "Data type hint (e.g., 'string')"
+        }
+      },
+      "required": ["key", "value"]
+    },
+
+    "credits": {
+      "type": "object",
+      "description": "Attribution for models and web sources used in this research",
+      "properties": {
+        "models": {
+          "type": "array",
+          "description": "AI models that contributed to this research",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Model name (e.g., 'claude-sonnet-4-6')"
+              },
+              "provider": {
+                "type": "string",
+                "description": "Model provider (e.g., 'anthropic')"
+              },
+              "role": {
+                "type": "string",
+                "description": "Role in the research (e.g., 'primary-researcher')"
+              }
+            },
+            "required": ["name", "provider", "role"]
+          }
+        },
+        "webSources": {
+          "type": "array",
+          "description": "Web pages cited in this research",
+          "items": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "format": "uri",
+                "description": "Source URL"
+              },
+              "title": {
+                "type": "string",
+                "description": "Page title"
+              },
+              "accessedAt": {
+                "type": "string",
+                "format": "date-time",
+                "description": "When the source was accessed (ISO 8601)"
+              }
+            },
+            "required": ["url", "title", "accessedAt"]
+          }
+        }
+      }
+    },
+
+    "researchSection": {
+      "type": "object",
+      "description": "A major section grouping within the research",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Section ID (slug, e.g., 'major-deities')",
+          "pattern": "^[a-z][a-z0-9_-]*$"
+        },
+        "type": {
+          "type": "string",
+          "const": "research-section",
+          "description": "Always 'research-section'"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name (e.g., 'Major Deities')"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Brief summary of this section"
+        },
+        "body": {
+          "type": "string",
+          "description": "Section content (markdown)"
+        },
+        "children": {
+          "type": "array",
+          "description": "Research entries within this section",
+          "items": {
+            "$ref": "#/$defs/researchEntry"
+          }
+        }
+      },
+      "required": ["id", "type", "name"]
+    },
+
+    "researchEntry": {
+      "type": "object",
+      "description": "An individual entity or topic entry within a research section",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Entry ID (slug, e.g., 'anu')",
+          "pattern": "^[a-z][a-z0-9_-]*$"
+        },
+        "type": {
+          "type": "string",
+          "const": "research-entry",
+          "description": "Always 'research-entry'"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name (e.g., 'Anu — Sky Father')"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Brief one-line summary"
+        },
+        "body": {
+          "type": "string",
+          "description": "Entry content (markdown)"
+        },
+        "attributes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/attribute" }
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["id", "type", "name"]
+    }
+  },
+
+  "examples": [
+    {
+      "metadata": {
+        "formatVersion": "1.3",
+        "created": "2026-03-09T10:00:00Z",
+        "updated": "2026-03-09T12:30:00Z"
+      },
+      "id": "sumerian-gods",
+      "type": "research",
+      "name": "Sumerian Gods",
+      "summary": "Overview of the major and minor deities in the Sumerian pantheon",
+      "body": "## Sumerian Gods\n\nThe Sumerian pantheon is one of the oldest recorded...",
+      "tags": ["mythology", "sumerian", "deities", "ancient-near-east"],
+      "attributes": [
+        { "key": "topic", "value": "Sumerian Gods", "dataType": "string" },
+        { "key": "depth", "value": "standard", "dataType": "string" },
+        { "key": "sources", "value": "llm-knowledge", "dataType": "string" },
+        { "key": "context", "value": "standalone", "dataType": "string" }
+      ],
+      "credits": {
+        "models": [
+          {
+            "name": "claude-sonnet-4-6",
+            "provider": "anthropic",
+            "role": "primary-researcher"
+          }
+        ],
+        "webSources": []
+      },
+      "children": [
+        {
+          "id": "major-deities",
+          "type": "research-section",
+          "name": "Major Deities",
+          "body": "Overview of the primary gods in the Sumerian pantheon...",
+          "children": [
+            {
+              "id": "anu",
+              "type": "research-entry",
+              "name": "Anu — Sky Father",
+              "summary": "Supreme god of the heavens",
+              "body": "Anu (also known as An) was the supreme deity..."
+            },
+            {
+              "id": "enlil",
+              "type": "research-entry",
+              "name": "Enlil — Lord of Wind",
+              "summary": "God of wind, air, and storms",
+              "body": "Enlil was one of the most important gods..."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

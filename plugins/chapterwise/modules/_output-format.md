@@ -1,7 +1,7 @@
-# Codex V1.2 Analysis Output Format
+# Codex V1.3 Analysis Output Format
 
 All analysis modules MUST output results matching this exact format.
-For the authoritative schema, see: `schemas/analysis-v1.2.schema.json`
+For the authoritative schema, see: `schemas/analysis-v1.3.schema.json`
 
 ## Required JSON Structure
 
@@ -28,11 +28,11 @@ For the authoritative schema, see: `schemas/analysis-v1.2.schema.json`
 
 ## How Your Output Becomes an Analysis Entry
 
-The `analysis_writer.py` script wraps your output in the full Codex V1.2 structure:
+The `analysis_writer.py` script wraps your output in the full Codex V1.3 structure:
 
 ```json
 {
-  "metadata": {"formatVersion": "1.2", "created": "...", "updated": "..."},
+  "metadata": {"formatVersion": "1.3", "created": "...", "updated": "..."},
   "id": "{basename}-analysis",
   "type": "analysis",
   "attributes": [

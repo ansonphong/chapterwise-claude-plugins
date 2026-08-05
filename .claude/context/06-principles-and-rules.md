@@ -36,7 +36,7 @@ Contextual rules that load when working on matching files:
 - `commands.md` -- Command file structure, frontmatter format, conventions
 - `scripts.md` -- Script I/O patterns (stdin JSON preferred), conventions
 - `testing.md` -- pytest conventions, TDD approach
-- `codex-format.md` -- Codex V1.2 structure, Codex Lite structure, validation workflow
+- `codex-format.md` -- Codex V1.3 structure, Codex Lite structure, validation workflow
 
 ## Validation After Output
 

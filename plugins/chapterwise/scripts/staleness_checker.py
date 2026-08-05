@@ -3,7 +3,7 @@
 Computes sourceHash for staleness detection.
 Checks if existing analysis is fresh or stale.
 
-Uses .analysis.json format (proper Codex V1.2 structure).
+Uses .analysis.json format (proper Codex V1.3 structure).
 """
 import hashlib
 import json
@@ -68,7 +68,7 @@ def get_analysis_source_hash(analysis_path: Path) -> Optional[str]:
 def get_module_latest_hash(analysis_path: Path, module_name: str) -> Optional[str]:
     """Get the sourceHash from the latest entry of a specific module.
 
-    Structure (proper Codex V1.2):
+    Structure (proper Codex V1.3):
     - children[]: analysis-module nodes (id = module_name)
       - children[]: analysis-entry nodes (sorted newest first)
         - attributes[]: includes sourceHash

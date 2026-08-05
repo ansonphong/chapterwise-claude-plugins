@@ -45,7 +45,7 @@ For most projects, start with this minimal index that auto-discovers content:
 
 ```yaml
 metadata:
-  formatVersion: "1.2"
+  formatVersion: "1.3"
 
 id: index-root
 type: index
@@ -69,7 +69,7 @@ patterns:
 
 ```yaml
 metadata:
-  formatVersion: "1.2"
+  formatVersion: "1.3"
   documentVersion: "1.0.0"
   created: "2026-01-24T00:00:00Z"
   author: "Author Name"

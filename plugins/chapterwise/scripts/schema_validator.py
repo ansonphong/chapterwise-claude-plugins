@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Schema Validator for Codex V1.2 and Analysis files.
+Schema Validator for Codex and Analysis files.
 Provides centralized JSON Schema validation for all scripts.
 
 Usage:
@@ -14,6 +14,12 @@ import json
 import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+
+# Codex format version (single source of truth).
+try:
+    from codex_version import CURRENT_FORMAT_VERSION
+except ImportError:  # standalone execution outside the scripts directory
+    CURRENT_FORMAT_VERSION = '1.3'
 
 try:
     import jsonschema
@@ -30,14 +36,14 @@ SCHEMA_DIR = Path(__file__).parent.parent.parent.parent / 'schemas'
 
 # Schema file mapping
 SCHEMA_FILES = {
-    'codex': 'codex-v1.2.schema.json',
-    'analysis': 'analysis-v1.2.schema.json',
+    'codex': 'codex-v1.3.schema.json',
+    'analysis': 'analysis-v1.3.schema.json',
 }
 
 
 class SchemaValidator:
     """
-    Centralized schema validator for Codex V1.2 format.
+    Centralized schema validator for the Codex format.
 
     Caches loaded schemas for performance.
     """
@@ -159,7 +165,7 @@ def _get_validator() -> SchemaValidator:
 
 def validate_codex(data: dict) -> Tuple[bool, List[str]]:
     """
-    Validate codex data against the Codex V1.2 schema.
+    Validate codex data against the Codex V1.3 schema.
 
     Args:
         data: Parsed codex content (dict)
@@ -178,7 +184,7 @@ def validate_codex(data: dict) -> Tuple[bool, List[str]]:
 
 def validate_analysis(data: dict) -> Tuple[bool, List[str]]:
     """
-    Validate analysis data against the Analysis V1.2 schema.
+    Validate analysis data against the Analysis V1.3 schema.
 
     Args:
         data: Parsed analysis content (dict)
@@ -231,7 +237,7 @@ if __name__ == '__main__':
         print("Testing schema validator...")
 
         # Test codex validation
-        valid_codex = {'metadata': {'formatVersion': '1.2'}}
+        valid_codex = {'metadata': {'formatVersion': CURRENT_FORMAT_VERSION}}
         is_valid, errors = validate_codex(valid_codex)
         print(f"Valid codex: {is_valid} (expected: True)")
 

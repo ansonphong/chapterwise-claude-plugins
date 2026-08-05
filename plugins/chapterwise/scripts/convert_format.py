@@ -29,6 +29,12 @@ from pathlib import Path
 from typing import Dict, List, Any, Tuple, Optional
 from datetime import datetime
 
+# Codex format version (single source of truth).
+try:
+    from codex_version import CURRENT_FORMAT_VERSION
+except ImportError:  # standalone execution outside the scripts directory
+    CURRENT_FORMAT_VERSION = '1.3'
+
 logger = logging.getLogger(__name__)
 
 
@@ -168,7 +174,7 @@ class CodexMarkdownConverter:
 
         codex: Dict[str, Any] = {
             'metadata': {
-                'formatVersion': '1.2',
+                'formatVersion': CURRENT_FORMAT_VERSION,
                 'documentVersion': '1.0.0',
                 'created': datetime.utcnow().isoformat() + 'Z',
                 'source': 'markdown-lite',

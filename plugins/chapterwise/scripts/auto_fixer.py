@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Auto-Fix Service for Codex V1.2 Integrity Issues
+Auto-Fix Service for Codex Integrity Issues
 Automatically repairs common integrity problems in codex files.
 
 This service can be used:
@@ -41,10 +41,17 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+# Codex format version constants (single source of truth).
+try:
+    from codex_version import CURRENT_FORMAT_VERSION, SUPPORTED_FORMAT_VERSIONS
+except ImportError:  # standalone execution outside the scripts directory
+    CURRENT_FORMAT_VERSION = '1.3'
+    SUPPORTED_FORMAT_VERSIONS = ['1.0', '1.1', '1.2', '1.3']
+
 
 class CodexAutoFixer:
     """
-    Service to automatically fix common integrity issues in Codex V1.2 files.
+    Service to automatically fix common integrity issues in Codex files.
     Spec: https://chapterwise.app/docs/codex/format/codex-format
     """
 
@@ -56,7 +63,7 @@ class CodexAutoFixer:
 
     def auto_fix_codex(self, codex, parsed_content: Dict[Any, Any] = None, regenerate_all_ids: bool = False) -> Tuple[Dict[Any, Any], List[str]]:
         """
-        Automatically fix common integrity issues in Codex V1.2 content.
+        Automatically fix common integrity issues in Codex content.
 
         Args:
             codex: Codex model instance (or None for standalone mode)
@@ -85,7 +92,7 @@ class CodexAutoFixer:
             if not regenerate_all_ids:
                 self._collect_valid_ids(fixed_content)
 
-            # Apply V1.2 format fixes
+            # Apply format fixes
             fixed_content = self._ensure_v1_metadata(fixed_content)
             fixed_content = self._remove_legacy_fields(fixed_content)
             fixed_content = self._fix_missing_node_fields(fixed_content)
@@ -130,18 +137,21 @@ class CodexAutoFixer:
 
     def _ensure_v1_metadata(self, content: Dict[Any, Any]) -> Dict[Any, Any]:
         """
-        Ensure V1.2 metadata section exists and is properly formatted.
+        Ensure the metadata section exists and is properly formatted.
 
-        V1.2 Format Requirements:
+        Format Requirements:
         - Must have 'metadata' object at root
-        - metadata.formatVersion must be "1.2"
+        - metadata.formatVersion must be a known version; missing or unknown
+          values are set to CURRENT_FORMAT_VERSION. A document already
+          declaring a known version is never rewritten — the auto-fixer
+          repairs integrity, it does not migrate documents between versions.
         - metadata.documentVersion recommended (defaults to "1.0.0")
 
         Args:
             content: Parsed codex content
 
         Returns:
-            Content with proper V1.2 metadata
+            Content with proper metadata
         """
         # Ensure metadata object exists
         if 'metadata' not in content:
@@ -152,14 +162,18 @@ class CodexAutoFixer:
             content['metadata'] = {}
             self.fixes_applied.append("Fixed invalid metadata structure")
 
-        # Ensure formatVersion is "1.2" (current spec version per chapterwise.app/docs/codex/format)
+        # Stamp the current spec version when absent. Documents that already
+        # declare a supported version are left alone — including older ones,
+        # which stay valid (see chapterwise.app/docs/codex/format).
         if 'formatVersion' not in content['metadata']:
-            content['metadata']['formatVersion'] = '1.2'
-            self.fixes_applied.append("Added metadata.formatVersion = '1.2'")
-        elif content['metadata']['formatVersion'] not in ['1.0', '1.1', '1.2']:
+            content['metadata']['formatVersion'] = CURRENT_FORMAT_VERSION
+            self.fixes_applied.append(f"Added metadata.formatVersion = '{CURRENT_FORMAT_VERSION}'")
+        elif content['metadata']['formatVersion'] not in SUPPORTED_FORMAT_VERSIONS:
             old_version = content['metadata']['formatVersion']
-            content['metadata']['formatVersion'] = '1.2'
-            self.fixes_applied.append(f"Updated metadata.formatVersion from '{old_version}' to '1.2'")
+            content['metadata']['formatVersion'] = CURRENT_FORMAT_VERSION
+            self.fixes_applied.append(
+                f"Updated metadata.formatVersion from '{old_version}' to '{CURRENT_FORMAT_VERSION}'"
+            )
 
         # Ensure documentVersion exists (if not present, initialize to 1.0.0)
         # NOTE: Never overwrite existing documentVersion - that's managed by versioning system
@@ -174,7 +188,7 @@ class CodexAutoFixer:
 
     def _remove_legacy_fields(self, content: Dict[Any, Any]) -> Dict[Any, Any]:
         """
-        Remove legacy fields that don't belong in V1.2 format.
+        Remove legacy fields that don't belong in the current format.
 
         Legacy fields to remove:
         - packetType (V0.9 field)
@@ -197,12 +211,12 @@ class CodexAutoFixer:
             legacy_fields_removed.append('packetType')
 
         if 'version' in content and 'metadata' in content:
-            # Only remove if metadata exists (meaning we're in V1.2)
+            # Only remove if metadata exists (meaning we're in a versioned document)
             del content['version']
             legacy_fields_removed.append('version')
 
         if 'codexId' in content:
-            # In V1.2, we use node-level 'id' not root-level 'codexId'
+            # We use node-level 'id' not root-level 'codexId'
             # If there's no 'id', migrate codexId to id
             if 'id' not in content and content['codexId']:
                 content['id'] = content['codexId']
@@ -233,9 +247,9 @@ class CodexAutoFixer:
 
     def _fix_missing_node_fields(self, content: Dict[Any, Any]) -> Dict[Any, Any]:
         """
-        Fix missing required node fields in V1.2 format.
+        Fix missing required node fields.
 
-        V1.2 nodes should have:
+        Nodes should have:
         - id: unique identifier (UUID recommended)
         - type: node classification
         - name or title: human-readable identifier
@@ -256,7 +270,7 @@ class CodexAutoFixer:
                         data['id'] = self._generate_new_uuid()
                         self.fixes_applied.append(f"Added missing 'id' field at {path}")
 
-                    # Fix missing type (optional in V1.2, but good practice)
+                    # Fix missing type (optional, but good practice)
                     if 'type' not in data and path:  # Don't add type to root
                         data['type'] = 'node'
                         self.fixes_applied.append(f"Added missing 'type' field at {path}")
@@ -464,7 +478,7 @@ class CodexAutoFixer:
                                 relation['targetId'] = self._generate_new_uuid()
                                 self.fixes_applied.append(f"Added missing 'targetId' field to relation at {path}.relations[{i}]")
 
-                            # Fix missing kind (V1.2 uses 'type', but 'kind' is legacy compatibility)
+                            # Fix missing kind (spec uses 'type', but 'kind' is legacy compatibility)
                             if 'kind' not in relation and 'type' not in relation:
                                 relation['type'] = 'related-to'
                                 self.fixes_applied.append(f"Added missing 'type' field to relation at {path}.relations[{i}]")
@@ -781,7 +795,7 @@ class CodexAutoFixer:
 
             return current_duration
 
-        # V1.2 format: Start traversal from root level
+        # Start traversal from root level
         # Process the document itself (depth 0)
         traverse_and_calculate(data, depth=0)
 
@@ -1052,10 +1066,10 @@ class CodexAutoFixer:
         import json
 
         try:
-            # Create a minimal valid V1.2 codex structure
+            # Create a minimal valid codex structure
             recovered_data = {
                 "metadata": {
-                    "formatVersion": "1.2",
+                    "formatVersion": CURRENT_FORMAT_VERSION,
                     "documentVersion": "1.0.0"
                 },
                 "id": self._generate_new_uuid(),
@@ -1064,7 +1078,7 @@ class CodexAutoFixer:
                 "attributes": []
             }
 
-            self.fixes_applied.append("Created minimal valid V1.2 codex structure from corrupted file")
+            self.fixes_applied.append("Created minimal valid codex structure from corrupted file")
             return recovered_data
 
         except Exception:
@@ -1125,10 +1139,10 @@ class CodexAutoFixer:
         Aggressive YAML recovery for severely malformed files.
         """
         try:
-            # Create a minimal valid V1.2 codex structure
+            # Create a minimal valid codex structure
             recovered_data = {
                 "metadata": {
-                    "formatVersion": "1.2",
+                    "formatVersion": CURRENT_FORMAT_VERSION,
                     "documentVersion": "1.0.0"
                 },
                 "id": self._generate_new_uuid(),
@@ -1137,7 +1151,7 @@ class CodexAutoFixer:
                 "attributes": []
             }
 
-            self.fixes_applied.append("Created minimal valid V1.2 codex structure from corrupted YAML file")
+            self.fixes_applied.append("Created minimal valid codex structure from corrupted YAML file")
             return recovered_data
 
         except Exception:
@@ -1491,7 +1505,7 @@ def fix_directory(directory_path: str, recursive: bool = False, dry_run: bool = 
 def main():
     """Main entry point for command-line usage."""
     parser = argparse.ArgumentParser(
-        description='Auto-fix Codex V1.2 files (YAML, JSON, and Markdown)',
+        description='Auto-fix Codex files (YAML, JSON, and Markdown)',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

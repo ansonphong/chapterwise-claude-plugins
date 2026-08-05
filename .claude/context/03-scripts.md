@@ -10,12 +10,12 @@ All scripts live in `plugins/chapterwise/scripts/`. Three interface patterns: st
 ## Validation & Integrity
 - `codex_validator.py` -- Validate and auto-fix `.codex.yaml` and `.md` files. Checks parsing, UUIDs, references, orphans. Supports `fix: true` mode.
 - `schema_validator.py` -- Library-only. JSON Schema validation against `schemas/` at repo root. Used by other scripts internally.
-- `auto_fixer.py` -- Auto-fix Codex V1.2 integrity issues (missing IDs, timestamps, structural problems). CLI and stdin JSON interfaces.
+- `auto_fixer.py` -- Auto-fix Codex V1.3 integrity issues (missing IDs, timestamps, structural problems). CLI and stdin JSON interfaces.
 - `lite_helper.py` -- Validate and fix Markdown frontmatter (Codex Lite). Supports `--init` to add frontmatter to bare markdown.
 
 ## Analysis Pipeline
 - `module_loader.py` -- Discover and load analysis modules. Commands: list, get, courses, recommend. Genre-aware module selection.
-- `analysis_writer.py` -- Write analysis results to `.analysis.json` in Codex V1.2 format. Handles history (up to 3 entries per module).
+- `analysis_writer.py` -- Write analysis results to `.analysis.json` in Codex V1.3 format. Handles history (up to 3 entries per module).
 - `staleness_checker.py` -- Compute SHA-256 sourceHash, detect if existing analysis is fresh or stale.
 
 ## Import & Format Detection

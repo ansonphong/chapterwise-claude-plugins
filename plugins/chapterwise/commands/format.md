@@ -11,7 +11,7 @@ triggers:
 argument-hint: "[file.codex.yaml]"
 ---
 
-# Chapterwise Codex Format V1.2
+# Chapterwise Codex Format V1.3
 
 Convert content to the Chapterwise Codex format - a perfectly recursive specification for **ANY structured content**. The format is infinitely flexible: invent any `type` you need. Common patterns are provided as templates, but you can create recipes, workouts, API docs, meeting notes, research papers, playlists, or literally anything else.
 
@@ -33,7 +33,7 @@ Every codex file MUST have:
 
 ```yaml
 metadata:
-  formatVersion: "1.2"
+  formatVersion: "1.3"
 ```
 
 ---
@@ -46,7 +46,7 @@ The Codex format is **infinitely flexible**. The templates below are common patt
 
 ```yaml
 metadata:
-  formatVersion: "1.2"
+  formatVersion: "1.3"
   documentVersion: "1.0.0"
   author: "[Author]"
   created: "[ISO-8601]"
@@ -166,8 +166,101 @@ attributes:
 | Structured sections | `children` array with `type: section` |
 | Sub-items of same kind | `children` with same type as parent |
 | Mixed sub-items | `children` with different types |
+| Side-by-side sections | `content` array with `width` |
+| Diagrams and data tables | `content` array with `type: diagram` / `type: spreadsheet` |
 | Links to other files | `include: "./path/file.codex.yaml"` |
 | External references | `external_url` or `relations` array |
+
+---
+
+## THE CONTENT ARRAY (V1.3)
+
+Where `body` is one continuous block of prose, `content` is a list of laid-out
+sections. Use it when a node has several distinct parts that should sit next to
+each other — a logline beside its themes, a scene's visuals beside its audio, a
+chapter's summary beside the diagram of its structure.
+
+```yaml
+content:
+  - key: visual
+    name: "Visual"
+    width: 1/2
+    value: |
+      Wide shot. The valley at first light.
+
+  - key: audio
+    name: "Audio"
+    width: 1/2
+    value: |
+      Ambient wind, no score until the reveal.
+
+  - key: structure
+    name: "Act Structure"
+    type: diagram
+    width: 1/1
+    include: ./diagrams/three-act.mermaid
+
+  - key: budget
+    name: "Word Budget"
+    type: spreadsheet
+    width: 1/1
+    include: ./data/chapter-budget.csv
+```
+
+### Content Item Fields
+
+| Field | Required | Purpose |
+|-------|:--------:|---------|
+| `key` | yes | Machine-readable identifier, lowercase-with-hyphens |
+| `value` | yes* | The content itself. Use `\|` for multiline. |
+| `name` | no | Display label shown above the section |
+| `type` | no | Content category (default `text`) |
+| `width` | no | Layout width (default `1/2`) |
+| `id` | no | Unique identifier |
+| `include` | no | Path to an external file supplying the content |
+
+\* Either `value` or `include` — `include` replaces `value` when the content
+lives in its own file.
+
+### Content Types
+
+| Type | Renders as |
+|------|-----------|
+| `text` | Markdown prose (default) |
+| `blockquote` | Quoted / pulled-out material |
+| `diagram` | Mermaid diagram — see `/chapterwise:diagram` |
+| `spreadsheet` | Interactive data table — see `/chapterwise:spreadsheet` |
+
+Custom types are permitted; unknown types fall back to text rendering.
+
+### Width
+
+Items flow left-to-right and wrap to a new row when the current one fills.
+YAML order is preserved.
+
+| Value | Behavior |
+|-------|----------|
+| `1/1` | Full width, gets its own row |
+| `1/2` | Half width (default) |
+| `1/3` | Third width |
+
+Set `width: 1/1` for diagrams, spreadsheets, and anything with wide content.
+Two `1/2` items sit side by side; three `1/3` items make a row of three.
+
+### Include Resolution (V1.3)
+
+`include:` is no longer limited to codex documents. Inside a content array it
+also resolves:
+
+| Extension | Becomes |
+|-----------|---------|
+| `.mermaid`, `.mmd` | A `diagram` section |
+| `.csv` | A `spreadsheet` section |
+| `.xlsx` | A `spreadsheet` section (converted to CSV) |
+| `.spreadsheet.yaml` | A `spreadsheet` section with column config and formulas |
+
+Path rules are unchanged: paths starting with `/` resolve from the Git project
+root, `./` from the current file's directory.
 
 ---
 
@@ -179,7 +272,7 @@ For planetariums, theaters, studios, or any venue with technical specs:
 
 ```yaml
 metadata:
-  formatVersion: "1.2"
+  formatVersion: "1.3"
   documentVersion: "1.0.0"
   author: "Studio Phong"
   created: "[ISO-8601]"
@@ -245,7 +338,7 @@ external_url: "https://venue-website.com"
 
 ```yaml
 metadata:
-  formatVersion: "1.2"
+  formatVersion: "1.3"
   documentVersion: "1.0.0"
   author: "[Author]"
   created: "[ISO-8601]"
@@ -327,11 +420,12 @@ tags:
 1. **Only `metadata.formatVersion` is required** - everything else optional
 2. **Use pipe `|` for multiline strings** - preserves markdown formatting
 3. **Perfect recursion** - any node can have children with same structure
-4. **Include directives** - reference files with `include: "./path/file.codex.yaml"`
+4. **Include directives** - reference files with `include: "./path/file.codex.yaml"`, or in a content array a `.mermaid`, `.csv`, `.xlsx`, or `.spreadsheet.yaml` source
 5. **Status doesn't inherit** - each node sets its own
 6. **Paths starting with `/`** - relative to Git repository root
 7. **Relative paths `./`** - resolved from current file's directory
 8. **NEVER create `.index.codex.yaml` files** - they are system-generated by Chapterwise
+9. **Older documents stay valid** - `1.0` through `1.3` all parse; never rewrite a document's `formatVersion` just to modernize it
 
 ## Workflow
 
@@ -341,6 +435,7 @@ tags:
 4. **Structure appropriately:**
    - Attributes for structured/typed data
    - Body for prose and markdown content
+   - Content array for laid-out sections, diagrams, and data tables
    - Children for hierarchy and sub-items
 5. **Apply tags** - for discoverability and organization
 6. **Suggest children** - recommend logical sub-nodes if applicable
@@ -369,7 +464,7 @@ Run it after:
 
 | Issue | Fix Applied |
 |-------|-------------|
-| Missing `metadata` section | Adds `metadata.formatVersion: "1.2"` |
+| Missing `metadata` section | Adds `metadata.formatVersion: "1.3"` |
 | Missing `documentVersion` | Adds `"1.0.0"` |
 | Legacy fields (`packetType`, `codexId`, `version`) | Removes or migrates them |
 | Missing node `id` | Generates UUID v4 |
@@ -434,7 +529,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/auto_fixer.py /path/to/directory -r -d -v
 |-----------|----------|
 | File not found | "File not found: {path}" |
 | Invalid YAML/JSON syntax | "Cannot parse {path} — check for syntax errors near line {N}." |
-| Missing `metadata.formatVersion` | "No formatVersion found. Adding `metadata.formatVersion: 1.2`." |
+| Missing `metadata.formatVersion` | "No formatVersion found. Adding `metadata.formatVersion: 1.3`." |
 | Write permission denied | "Cannot write to {path} — check file permissions." |
 | Missing PyYAML dependency | "Missing PyYAML. Install with: `pip3 install pyyaml`" |
 

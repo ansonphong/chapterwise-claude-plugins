@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Writes analysis results to .analysis.json files.
-Uses proper Codex V1.2 format with children arrays and attributes.
+Uses proper Codex V1.3 format with children arrays and attributes.
 
 Structure matches chapterwise-app file-based analysis system:
 - Root: type "analysis" with sourceFile/sourceHash in attributes
@@ -24,6 +24,12 @@ logger = logging.getLogger(__name__)
 # Add scripts directory to path for local imports
 sys.path.insert(0, str(Path(__file__).parent))
 from staleness_checker import get_analysis_file_path, compute_source_hash
+
+# Codex format version (single source of truth).
+try:
+    from codex_version import CURRENT_FORMAT_VERSION
+except ImportError:  # standalone execution outside the scripts directory
+    CURRENT_FORMAT_VERSION = '1.3'
 
 DEFAULT_HISTORY_DEPTH = 3
 
@@ -64,14 +70,14 @@ def _set_attribute(node: dict, key: str, value: Any) -> None:
 
 
 def create_analysis_file_structure(source_path: Path, source_hash: str) -> Dict:
-    """Create initial structure for a new analysis file (Codex V1.2 format)."""
+    """Create initial structure for a new analysis file (Codex V1.3 format)."""
     now = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
     source_filename = os.path.basename(source_path)
     base_name = Path(source_filename).stem.replace('.codex', '')
 
     return {
         'metadata': {
-            'formatVersion': '1.2',
+            'formatVersion': CURRENT_FORMAT_VERSION,
             'created': now,
             'updated': now
         },
@@ -95,7 +101,7 @@ def create_analysis_entry(
     tags: List[str] = None,
     entry_attributes: List[Dict] = None
 ) -> Dict:
-    """Create a single analysis entry node (Codex V1.2 format)."""
+    """Create a single analysis entry node (Codex V1.3 format)."""
     now = datetime.now(timezone.utc)
     entry_id = f"entry-{now.strftime('%Y%m%dT%H%M%SZ')}"
 

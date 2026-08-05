@@ -13,13 +13,13 @@ The `/reader` command copies a template, injects codex content, and produces a s
 
 ## JSON Schemas (repo root `schemas/`)
 
-Three JSON Schema files (Draft 2020-12) defining the Codex V1.2 ecosystem:
+Three JSON Schema files (Draft 2020-12) defining the Codex V1.3 ecosystem:
 
 | Schema | File | Validates |
 |--------|------|-----------|
-| **Codex V1.2** | `schemas/codex-v1.2.schema.json` | `.codex.yaml` files. Recursive structure: metadata, id, type, name, summary, body, attributes, tags, children, relations. |
-| **Analysis V1.2** | `schemas/analysis-v1.2.schema.json` | `.analysis.json` files. Wraps analysis-module children containing analysis-entry children with sourceHash, model, timestamp. |
-| **Research V1.2** | `schemas/research-v1.2.schema.json` | `.research.json` files. Research output format for `/research` and `/research:deep` commands. |
+| **Codex V1.3** | `schemas/codex-v1.3.schema.json` | `.codex.yaml` files. Recursive structure: metadata, id, type, name, summary, body, attributes, tags, children, relations. |
+| **Analysis V1.2** | `schemas/analysis-v1.3.schema.json` | `.analysis.json` files. Wraps analysis-module children containing analysis-entry children with sourceHash, model, timestamp. |
+| **Research V1.2** | `schemas/research-v1.3.schema.json` | `.research.json` files. Research output format for `/research` and `/research:deep` commands. |
 
 Schema resolution in `schema_validator.py`: `Path(__file__).parent.parent.parent.parent / 'schemas'` (from `scripts/` up to repo root).
 

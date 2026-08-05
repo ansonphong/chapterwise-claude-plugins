@@ -2,11 +2,11 @@
 
 Applies when creating or modifying codex output files (`.codex.yaml`, `.codex.md`, `.analysis.json`, `.research.json`).
 
-## Codex V1.2 JSON Structure
+## Codex V1.3 JSON Structure
 
 ```json
 {
-  "metadata": { "formatVersion": "1.2", "created": "ISO-8601", "updated": "ISO-8601" },
+  "metadata": { "formatVersion": "1.3", "created": "ISO-8601", "updated": "ISO-8601" },
   "id": "unique-slug",
   "type": "chapter|analysis|research|atlas|...",
   "name": "Display Name",
@@ -37,7 +37,7 @@ Content in standard Markdown...
 ## Validation
 
 - Always run `codex_validator.py` after generating codex output
-- Schema files live in `schemas/` (codex-v1.2.schema.json, analysis-v1.2.schema.json, research-v1.2.schema.json)
+- Schema files live in `schemas/` (codex-v1.3.schema.json, analysis-v1.3.schema.json, research-v1.3.schema.json)
 - Silent on success — only report auto-fixes and unfixable issues
 
 ## Schema Resolution
@@ -46,9 +46,9 @@ Schema files are at the **repository root** in `schemas/`:
 
 ```
 schemas/
-├── codex-v1.2.schema.json
-├── analysis-v1.2.schema.json
-└── research-v1.2.schema.json
+├── codex-v1.3.schema.json
+├── analysis-v1.3.schema.json
+└── research-v1.3.schema.json
 ```
 
 The `schema_validator.py` script resolves schemas relative to itself:

@@ -17,6 +17,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, TYPE_CHECKING
 
+# Codex format version (single source of truth).
+try:
+    from codex_version import CURRENT_FORMAT_VERSION
+except ImportError:  # standalone execution outside the scripts directory
+    CURRENT_FORMAT_VERSION = '1.3'
+
 try:
     import yaml
 except ImportError:
@@ -207,7 +213,7 @@ class ScrivenerFileWriter:
         """Build Codex data structure."""
         data = {
             "metadata": {
-                "formatVersion": "1.2",
+                "formatVersion": CURRENT_FORMAT_VERSION,
                 "created": datetime.now().isoformat()
             },
             "id": item.uuid,
@@ -250,7 +256,7 @@ class ScrivenerFileWriter:
         index_path = self.output_dir / "index.codex.yaml"
         index_data = {
             "metadata": {
-                "formatVersion": "1.2",
+                "formatVersion": CURRENT_FORMAT_VERSION,
                 "created": datetime.now().isoformat(),
                 "source": "scrivener-import"
             },
@@ -284,7 +290,7 @@ class ScrivenerFileWriter:
         """Build .index.codex.yaml structure."""
         return {
             "metadata": {
-                "formatVersion": "2.1",
+                "formatVersion": CURRENT_FORMAT_VERSION,
                 "generated": True,
                 "generatedAt": datetime.now().isoformat(),
                 "source": "scrivener-import"
@@ -400,7 +406,7 @@ class ScrivenerFileWriter:
 
         index_data = {
             "metadata": {
-                "formatVersion": "1.2",
+                "formatVersion": CURRENT_FORMAT_VERSION,
                 "generator": "scrivener-import"
             },
             "id": container_item.uuid,
@@ -518,7 +524,7 @@ class ScrivenerFileWriter:
 
         index_data = {
             "metadata": {
-                "formatVersion": "1.2",
+                "formatVersion": CURRENT_FORMAT_VERSION,
                 "generator": "scrivener-import",
                 "source": f"{project.title}.scriv"
             },

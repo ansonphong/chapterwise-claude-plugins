@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://chapterwise.app/schemas/codex-v1.2.schema.json",
-  "title": "Codex V1.2",
-  "description": "ChapterWise Codex format specification v1.2 - A recursive, self-describing document format for structured creative content",
+  "$id": "https://chapterwise.app/schemas/codex-v1.3.schema.json",
+  "title": "Codex V1.3",
+  "description": "ChapterWise Codex format specification v1.3 - A recursive, self-describing document format for structured creative content. Accepts documents declaring formatVersion 1.0 through 1.3.",
   "type": "object",
 
   "properties": {
@@ -118,6 +118,18 @@
     "color": {
       "type": "string",
       "description": "UI color identifier for visual organization"
+    },
+    "key": {
+      "type": "string",
+      "description": "Machine-readable key for this node"
+    },
+    "animation_url": {
+      "type": "string",
+      "description": "URL to an animation or video asset"
+    },
+    "display": {
+      "type": "object",
+      "description": "Visual presentation cascade settings"
     }
   },
 
@@ -130,8 +142,8 @@
       "properties": {
         "formatVersion": {
           "type": "string",
-          "enum": ["1.0", "1.1", "1.2"],
-          "description": "Codex format version"
+          "enum": ["1.0", "1.1", "1.2", "1.3"],
+          "description": "Codex format version. Current spec is 1.3; earlier versions remain valid."
         },
         "documentVersion": {
           "type": "string",
@@ -163,6 +175,11 @@
           "type": "array",
           "items": { "type": "string" },
           "description": "Document-level tags"
+        },
+        "iconset": {
+          "type": "string",
+          "enum": ["phosphor", "fontawesome", "lucide"],
+          "description": "Icon family used when rendering this document"
         }
       },
       "required": ["formatVersion"]
@@ -265,7 +282,7 @@
         },
         "value": {
           "type": "string",
-          "description": "Section content"
+          "description": "Section content. For type 'diagram' this is Mermaid source; for type 'spreadsheet' it is inline CSV."
         },
         "content": {
           "type": "string",
@@ -279,7 +296,18 @@
           "type": "string"
         },
         "type": {
-          "type": "string"
+          "type": "string",
+          "description": "Content category. Known values: text (default), blockquote, diagram, spreadsheet. Custom types are permitted."
+        },
+        "width": {
+          "type": "string",
+          "enum": ["1/1", "1/2", "1/3"],
+          "description": "V1.3 flex layout width. Items flow left-to-right and wrap. Defaults to 1/2."
+        },
+        "include": {
+          "type": "string",
+          "description": "V1.3 - path to an external file supplying this section's content",
+          "pattern": "^(\\.{0,2}/|/).+\\.(codex\\.)?(yaml|yml|json|md|mermaid|mmd|csv|xlsx)$"
         },
         "attributes": {
           "type": "array",
@@ -290,12 +318,12 @@
 
     "includeDirective": {
       "type": "object",
-      "description": "Reference to external codex file",
+      "description": "Reference to an external file. V1.3 extends resolution beyond codex documents to diagram (.mermaid, .mmd) and spreadsheet (.csv, .xlsx, .spreadsheet.yaml) sources.",
       "properties": {
         "include": {
           "type": "string",
           "description": "Path to external file",
-          "pattern": "^(\\.{0,2}/|/).+\\.(codex\\.)?(yaml|yml|json|md)$"
+          "pattern": "^(\\.{0,2}/|/).+\\.(codex\\.|spreadsheet\\.)?(yaml|yml|json|md|mermaid|mmd|csv|xlsx)$"
         }
       },
       "required": ["include"]
@@ -325,7 +353,7 @@
   "examples": [
     {
       "metadata": {
-        "formatVersion": "1.2",
+        "formatVersion": "1.3",
         "documentVersion": "1.0.0",
         "created": "2026-02-02T12:00:00Z",
         "author": "Jane Author"
@@ -340,9 +368,15 @@
         { "key": "word_count", "value": 85000, "dataType": "int" }
       ],
       "tags": ["fantasy", "adventure", "coming-of-age"],
+      "content": [
+        { "key": "logline", "name": "Logline", "width": "1/2", "value": "A cartographer's daughter inherits a map of a country that does not exist." },
+        { "key": "themes", "name": "Themes", "width": "1/2", "value": "Inheritance, exile, the cost of knowing." },
+        { "key": "arc-flow", "name": "Story Structure", "type": "diagram", "width": "1/1", "include": "./diagrams/three-act.mermaid" },
+        { "key": "chapter-budget", "name": "Word Budget", "type": "spreadsheet", "width": "1/1", "include": "./data/chapter-budget.csv" }
+      ],
       "children": [
         {
-          "metadata": { "formatVersion": "1.2" },
+          "metadata": { "formatVersion": "1.3" },
           "id": "chapter-1",
           "type": "chapter",
           "name": "The Beginning",

@@ -76,7 +76,7 @@ echo '{"source_path": "chapter.codex.yaml", "analysis": {...}, "modules": ["summ
 ```
 Output: `{"analysis_file": "chapter.analysis.json", "created": true}`
 
-Uses Codex V1.2 format with children arrays and attributes.
+Uses Codex V1.3 format with children arrays and attributes.
 
 **`staleness_checker.py`** — Compute sourceHash and detect staleness
 ```bash
@@ -118,7 +118,7 @@ echo '{"text": "This goes after the hyperborean incursion.\n\nNew content.", "ba
 ```
 Output: `{"instruction": "after the hyperborean incursion", "content": "New content"}`
 
-**`auto_fixer.py`** — Auto-fix Codex V1.2 integrity issues
+**`auto_fixer.py`** — Auto-fix Codex V1.3 integrity issues
 ```bash
 echo '{"file": "story.codex.yaml", "dry_run": false}' | python3 auto_fixer.py
 ```
@@ -157,7 +157,7 @@ Options: `--dry-run`, `--include-md`, `-v`
 
 ### Integrity & Metadata
 
-**`auto_fixer.py`** — Auto-fix Codex V1.2 integrity issues
+**`auto_fixer.py`** — Auto-fix Codex V1.3 integrity issues
 ```bash
 python3 auto_fixer.py /path/to/file.codex.yaml
 python3 auto_fixer.py /path/to/directory --recursive
@@ -250,7 +250,7 @@ Options: `--to-codex`, `--to-markdown`, `-o/--output`
 
 These scripts provide utility functions and are imported by other scripts. They have no CLI entry point but can be used as Python modules.
 
-**`schema_validator.py`** — JSON Schema validation for Codex V1.2 and analysis files
+**`schema_validator.py`** — JSON Schema validation for Codex V1.3 and analysis files
 ```python
 from schema_validator import validate_codex, validate_analysis
 is_valid, errors = validate_codex(data)

@@ -22,6 +22,12 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime
 
+# Codex format version (single source of truth).
+try:
+    from codex_version import CURRENT_FORMAT_VERSION
+except ImportError:  # standalone execution outside the scripts directory
+    CURRENT_FORMAT_VERSION = '1.3'
+
 logger = logging.getLogger(__name__)
 
 # Default patterns
@@ -130,7 +136,7 @@ class IndexGenerator:
         # Build the index structure
         index = {
             "metadata": {
-                "formatVersion": "1.2",
+                "formatVersion": CURRENT_FORMAT_VERSION,
                 "documentVersion": "1.0.0",
                 "created": datetime.utcnow().isoformat() + "Z",
             },

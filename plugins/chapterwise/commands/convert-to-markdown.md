@@ -84,7 +84,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/convert_format.py story.codex.yaml --to-ma
 **Input: `character.codex.yaml`**
 ```yaml
 metadata:
-  formatVersion: "1.2"
+  formatVersion: "1.3"
   author: Jane Doe
 
 type: character

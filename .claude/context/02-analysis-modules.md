@@ -49,7 +49,7 @@ Note the division of labour: `immersion` asks whether a text transports a reader
 1. Module prompt is read from its `.md` file body (after frontmatter)
 2. Source codex file content is fed alongside the module prompt
 3. LLM produces structured JSON matching `_output-format.md` schema
-4. `analysis_writer.py` wraps output in Codex V1.2 structure and saves to `.analysis.json`
+4. `analysis_writer.py` wraps output in Codex V1.3 structure and saves to `.analysis.json`
 5. `staleness_checker.py` uses SHA-256 hash (first 16 chars) to detect when source changes
 
 ## Output Format

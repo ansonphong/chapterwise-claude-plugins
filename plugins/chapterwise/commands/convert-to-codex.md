@@ -89,7 +89,7 @@ It was a dark and stormy night...
 **Output: `chapter-01.codex.yaml`**
 ```yaml
 metadata:
-  formatVersion: "1.2"
+  formatVersion: "1.3"
   documentVersion: "1.0.0"
   created: "2024-01-01T00:00:00Z"
   source: markdown-lite

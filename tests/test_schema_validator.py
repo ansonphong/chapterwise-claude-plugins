@@ -17,14 +17,14 @@ class TestSchemaValidator:
         validator = SchemaValidator()
         schema = validator.load_schema('codex')
         assert schema is not None
-        assert schema.get('title') == 'Codex V1.2'
+        assert schema.get('title') == 'Codex V1.3'
 
     def test_load_analysis_schema(self):
         """Should load analysis schema successfully."""
         validator = SchemaValidator()
         schema = validator.load_schema('analysis')
         assert schema is not None
-        assert schema.get('title') == 'Codex Analysis File V1.2'
+        assert schema.get('title') == 'Codex Analysis File V1.3'
 
     def test_load_invalid_schema_type(self):
         """Should return None for unknown schema type."""

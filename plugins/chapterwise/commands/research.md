@@ -195,12 +195,12 @@ credits:
 {Structured research content with sections and subsections...}
 ```
 
-#### Codex V1.2 JSON Format (.research.json)
+#### Codex V1.3 JSON Format (.research.json)
 
 ```json
 {
   "metadata": {
-    "formatVersion": "1.2",
+    "formatVersion": "1.3",
     "created": "{ISO 8601}",
     "updated": "{ISO 8601}"
   },
@@ -280,7 +280,7 @@ Run validation on all written files. This step is mandatory — run it before th
 
 For Codex JSON (`.research.json`) files:
 1. Parse as JSON — verify valid structure
-2. Verify required Codex V1.2 fields: `metadata`, `id`, `type: "research"`, `attributes`, `credits`
+2. Verify required Codex V1.3 fields: `metadata`, `id`, `type: "research"`, `attributes`, `credits`
 3. Verify `credits.models` is non-empty (agent must have added itself)
 
 For Codex Markdown (`.codex.md`) files:

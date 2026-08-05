@@ -13,7 +13,7 @@ plugins/chapterwise/
 ├── patterns/                    # Format conversion patterns + common utilities
 ├── templates/                   # Reader HTML templates (minimal, academic)
 ├── references/                  # principles.md, language-rules.md, insert specs, immersive-effects/comfort
-└── schemas/                     # Codex V1.2, analysis, research, recipe schemas
+└── schemas/                     # Codex V1.3, analysis, research, recipe schemas
 ```
 
 ## Core Principles
@@ -45,7 +45,7 @@ See `.claude/rules/` for topic-specific rules:
 - `commands.md` — command file structure, triggers, allowed tools
 - `scripts.md` — JSON stdin/stdout patterns, error handling
 - `testing.md` — pytest, TDD, structure mirroring
-- `codex-format.md` — Codex V1.2, Codex Lite, validation, schema resolution
+- `codex-format.md` — Codex V1.3, Codex Lite, validation, schema resolution
 
 ## Context
 
@@ -70,6 +70,7 @@ After implementing any plan:
 
 ## Recent Changes
 
+- **2026-08-04** — v2.2.0. Codex **V1.3** upgrade. The plugin had been emitting V1.2 while the published spec moved on. Schemas renamed to `*-v1.3.schema.json` and taught the V1.3 content array (`width`, `diagram`/`spreadsheet` types, extended `include` resolution for `.mermaid`/`.mmd`/`.csv`/`.xlsx`/`.spreadsheet.yaml`). `/format` now documents the content array — previously `width` and the new types existed only in `/diagram` and `/spreadsheet`, so the general formatter never emitted them. New `scripts/codex_version.py` is the single source of truth for the version; every stamping script imports it. Fixed: the auto-fixer silently downgraded V1.3 documents to 1.2 on every run, and `scrivener_file_writer.py` stamped the plugin's own version (`2.1`) as a codex `formatVersion`. Note: `.spreadsheet.yaml` keeps its own independent `formatVersion: "1.0"` — unrelated to the codex spec.
 - **2026-08-04** — v2.1.0. Added `immersive_design` module for dome shows and immersive experiences, backed by two new reference files (`immersive-effects.md`, 59 effects; `immersive-comfort.md`, vestibular thresholds and fulldome pacing). Renamed `gag_analysis` → `comedy_analysis`; the word "gag" is gone from the plugin, and the immersive unit is an "effect". New `immersive` course. Removed all billing vocabulary from `/atlas` — plugin users bring their own compute, so free/paid pass framing had no meaning here. Design spec: `../../plans/plugins/2026-08-04-immersive-design-module.md`.
 
 ## Vocabulary Guards

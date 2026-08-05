@@ -1,0 +1,266 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chapterwise.app/schemas/analysis-v1.3.schema.json",
+  "title": "Codex Analysis File V1.3",
+  "description": "ChapterWise analysis file format - Sibling .analysis.json files storing AI-generated literary analysis results",
+  "type": "object",
+
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "formatVersion": {
+          "type": "string",
+          "enum": ["1.2", "1.3"],
+          "description": "Codex format version. New analysis files are written as 1.3; 1.2 remains readable."
+        },
+        "created": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["formatVersion"]
+    },
+    "id": {
+      "type": "string",
+      "description": "Analysis file ID (typically: {basename}-analysis)",
+      "pattern": "^[a-zA-Z0-9_-]+-analysis$"
+    },
+    "type": {
+      "type": "string",
+      "const": "analysis",
+      "description": "Root node type is always 'analysis'"
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name (typically: 'Analysis Results')"
+    },
+    "attributes": {
+      "type": "array",
+      "description": "Root-level attributes including sourceFile and sourceHash",
+      "items": {
+        "$ref": "#/$defs/attribute"
+      },
+      "contains": {
+        "properties": {
+          "key": { "const": "sourceFile" }
+        }
+      }
+    },
+    "children": {
+      "type": "array",
+      "description": "Analysis modules (one per module type)",
+      "items": {
+        "$ref": "#/$defs/analysisModule"
+      }
+    }
+  },
+
+  "required": ["metadata", "id", "type", "attributes", "children"],
+
+  "$defs": {
+    "attribute": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "Attribute key"
+        },
+        "value": {
+          "description": "Attribute value"
+        }
+      },
+      "required": ["key", "value"]
+    },
+
+    "analysisModule": {
+      "type": "object",
+      "description": "Container for a specific analysis module's results",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Module ID (snake_case: summary, characters, plot_holes, story_beats, critical_review, etc.)",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "type": {
+          "type": "string",
+          "const": "analysis-module",
+          "description": "Always 'analysis-module'"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name (e.g., 'Summary', 'Characters')"
+        },
+        "children": {
+          "type": "array",
+          "description": "Analysis entries (newest first, bounded history)",
+          "items": {
+            "$ref": "#/$defs/analysisEntry"
+          }
+        }
+      },
+      "required": ["id", "type", "name", "children"]
+    },
+
+    "analysisEntry": {
+      "type": "object",
+      "description": "Single analysis run result",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Entry ID (format: entry-YYYYMMDDTHHMMSSZ with optional suffix)",
+          "pattern": "^entry-\\d{8}T\\d{6}Z(-[a-z0-9]+)?$"
+        },
+        "type": {
+          "type": "string",
+          "const": "analysis-entry",
+          "description": "Always 'analysis-entry'"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["published", "draft"],
+          "description": "published = current, draft = stale/historical"
+        },
+        "attributes": {
+          "type": "array",
+          "description": "Entry metadata including model, sourceHash, analysisStatus, timestamp",
+          "items": {
+            "$ref": "#/$defs/attribute"
+          }
+        },
+        "body": {
+          "type": "string",
+          "description": "Main analysis content (markdown)"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Brief one-line summary of findings"
+        },
+        "children": {
+          "type": "array",
+          "description": "Structured sub-sections of the analysis",
+          "items": {
+            "$ref": "#/$defs/analysisSection"
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Analysis tags for searchability"
+        }
+      },
+      "required": ["id", "type", "status", "attributes", "body"]
+    },
+
+    "analysisSection": {
+      "type": "object",
+      "description": "Sub-section within an analysis entry",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Section name"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Section summary"
+        },
+        "content": {
+          "type": "string",
+          "description": "Section content (markdown)"
+        },
+        "attributes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/attribute" }
+        }
+      },
+      "required": ["name"]
+    },
+
+    "entryAttributes": {
+      "description": "Required attributes for analysis entries",
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "key": { "const": "model" },
+              "value": { "type": "string", "description": "Model used (e.g., claude-sonnet-4, gpt-4)" }
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "key": { "const": "sourceHash" },
+              "value": { "type": "string", "pattern": "^[a-f0-9]{16}$", "description": "SHA-256 first 16 chars" }
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "key": { "const": "analysisStatus" },
+              "value": { "type": "string", "enum": ["current", "stale"] }
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "key": { "const": "timestamp" },
+              "value": { "type": "string", "format": "date-time" }
+            }
+          }
+        ]
+      }
+    }
+  },
+
+  "examples": [
+    {
+      "metadata": {
+        "formatVersion": "1.3",
+        "created": "2026-02-02T12:00:00Z",
+        "updated": "2026-02-02T14:30:00Z"
+      },
+      "id": "manuscript-analysis",
+      "type": "analysis",
+      "name": "Analysis Results",
+      "attributes": [
+        { "key": "sourceFile", "value": "manuscript.codex.yaml" },
+        { "key": "sourceHash", "value": "abc123def456789a" }
+      ],
+      "children": [
+        {
+          "id": "summary",
+          "type": "analysis-module",
+          "name": "Summary",
+          "children": [
+            {
+              "id": "entry-20260202T143000Z",
+              "type": "analysis-entry",
+              "status": "published",
+              "attributes": [
+                { "key": "model", "value": "claude-sonnet-4" },
+                { "key": "sourceHash", "value": "abc123def456789a" },
+                { "key": "analysisStatus", "value": "current" },
+                { "key": "timestamp", "value": "2026-02-02T14:30:00Z" }
+              ],
+              "body": "## Summary\n\nThis chapter introduces the protagonist...",
+              "summary": "Introduction of protagonist and initial conflict setup",
+              "children": [
+                {
+                  "name": "Key Events",
+                  "content": "1. Protagonist arrives in city\n2. Discovers mysterious letter"
+                }
+              ],
+              "tags": ["summary", "introduction", "protagonist"]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -24,7 +24,7 @@ class TestCodexSchemaExamples:
 
     @pytest.fixture
     def codex_schema(self):
-        with open(SCHEMA_DIR / 'codex-v1.2.schema.json') as f:
+        with open(SCHEMA_DIR / 'codex-v1.3.schema.json') as f:
             return json.load(f)
 
     def test_schema_has_examples(self, codex_schema):
@@ -48,7 +48,7 @@ class TestAnalysisSchemaExamples:
 
     @pytest.fixture
     def analysis_schema(self):
-        with open(SCHEMA_DIR / 'analysis-v1.2.schema.json') as f:
+        with open(SCHEMA_DIR / 'analysis-v1.3.schema.json') as f:
             return json.load(f)
 
     def test_schema_has_examples(self, analysis_schema):

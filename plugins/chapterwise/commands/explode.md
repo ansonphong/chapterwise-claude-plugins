@@ -45,7 +45,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/explode_codex.py story.codex.yaml
 
 1. **Reads** the input codex file
 2. **Extracts** matching children based on type filter
-3. **Creates** standalone V1.0 codex files for each extracted child
+3. **Creates** standalone codex files for each extracted child
 4. **Replaces** extracted children with `include:` directives
 5. **Runs auto-fixer** on all extracted files (unless disabled)
 6. **Creates backup** of original file (unless disabled)
@@ -55,7 +55,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/explode_codex.py story.codex.yaml
 **Before (story.codex.yaml):**
 ```yaml
 metadata:
-  formatVersion: "1.2"
+  formatVersion: "1.3"
 
 id: story-001
 type: story
@@ -83,7 +83,7 @@ children:
 **After (story.codex.yaml):**
 ```yaml
 metadata:
-  formatVersion: "1.2"
+  formatVersion: "1.3"
   exploded:
     timestamp: "2026-01-24T..."
     extracted_types: ["character", "location"]

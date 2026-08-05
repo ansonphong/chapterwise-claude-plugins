@@ -3,7 +3,7 @@
 Codex Exploder Service - Extract and Modularize Codex Children
 
 This service extracts direct children from a codex file based on node type,
-saves each as a standalone V1.2 codex file, and replaces them with include
+saves each as a standalone codex file, and replaces them with include
 directives in the parent file.
 
 This enables:
@@ -40,6 +40,12 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Any, Optional, Tuple
 from collections import defaultdict
+
+# Codex format version (single source of truth).
+try:
+    from codex_version import CURRENT_FORMAT_VERSION
+except ImportError:  # standalone execution outside the scripts directory
+    CURRENT_FORMAT_VERSION = '1.3'
 
 # Setup path for plugin execution - import auto_fixer from same directory
 script_dir = Path(__file__).resolve().parent
@@ -359,11 +365,11 @@ class CodexExploder:
         parent_path: str
     ) -> Dict[Any, Any]:
         """
-        Create a standalone V1.2 codex file from a child node.
+        Create a standalone codex file from a child node.
         """
         # Build metadata
         metadata = {
-            'formatVersion': '1.2',
+            'formatVersion': CURRENT_FORMAT_VERSION,
             'documentVersion': '1.0.0',
             'created': datetime.utcnow().isoformat() + 'Z',
             'extractedFrom': parent_path

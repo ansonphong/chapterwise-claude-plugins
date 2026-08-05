@@ -259,7 +259,7 @@ Pass the analysis result to the writer:
 python3 ${CLAUDE_PLUGIN_ROOT}/scripts/analysis_writer.py SOURCE_FILE MODULE_NAME - < RESULT_JSON
 ```
 
-The writer saves results to `{source_basename}.analysis.json` in the same directory as the source file, using Codex V1.2 format with module history.
+The writer saves results to `{source_basename}.analysis.json` in the same directory as the source file, using Codex V1.3 format with module history.
 
 ### Step 2g: Report
 
@@ -498,7 +498,7 @@ Run after every analysis run — single module or full course batch. This step i
 For each `.analysis.json` written during this run:
 
 1. Parse as JSON — if invalid JSON, regenerate from the in-memory analysis result.
-2. Verify required Codex V1.2 structure:
+2. Verify required Codex V1.3 structure:
    - Root has `id`, `type: "analysis"`, `attributes` array, `children` array
    - Each module child has `type: "analysis-module"`, `id` matching module name
    - Each entry child has `type: "analysis-entry"`, `sourceHash` in attributes
@@ -640,12 +640,12 @@ echo '{"recipe_path":".chapterwise/analysis-recipe"}' | python3 ${CLAUDE_PLUGIN_
 
 ## .analysis.json Output Schema
 
-Each analysis run produces or updates a `.analysis.json` file using Codex V1.2 format:
+Each analysis run produces or updates a `.analysis.json` file using Codex V1.3 format:
 
 ```json
 {
   "metadata": {
-    "formatVersion": "1.2",
+    "formatVersion": "1.3",
     "created": "2026-02-27T15:00:00Z",
     "updated": "2026-02-27T15:00:00Z"
   },
