@@ -45,7 +45,57 @@ If no flags are present, proceed to **Step 1** of the Build New Atlas pipeline. 
 
 ---
 
+## Settings
+
+`.chapterwise/settings.json` holds what this project builds by default. Read it before
+asking anything:
+
+```bash
+echo '{"path": ".", "section": "atlas"}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/settings.py resolve
+```
+
+```json
+{
+  "atlas": {
+    "output_dir": "atlas",
+    "sections": ["characters", "timeline", "themes", "plot-structure",
+                 "locations", "relationships"]
+  }
+}
+```
+
+| Key | Default | Meaning |
+|---|---|---|
+| `atlas.output_dir` | `atlas` | Folder, relative to the **project root** — an atlas is built once for the project, not beside one chapter |
+| `atlas.sections` | the six above | Which sections to build |
+
+`sources` marks each value `settings`, `recipe`, or `default`. **Never ask about a value
+that came from `settings` or `recipe`** — use it and say so in one clause. Ask only about
+`default` values. A flag beats both for that run and is never written back.
+
+`output_dir` resolves the way codex `include` paths do: `atlas` and `/atlas` are the
+project root, `~/…` is a literal path. `--name` still overrides per run and does not
+change the setting.
+
+After the first build, if nothing was configured yet, offer once:
+
+> "Save these as this project's defaults? {N} sections into `atlas/`."
+
+```bash
+echo '{"path": ".", "updates": {"atlas": {"sections": [...], "output_dir": "atlas"}}}' \
+  | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/settings.py set
+```
+
+Settings are intent, and are committed. `.chapterwise/atlas-recipe/` stays what it has
+always been — the record of what the last build actually did.
+
+---
+
 ## BUILD NEW ATLAS
+
+### Step 0: Read settings
+
+Run `settings.py resolve` above. Anything already configured is not asked in Step 2.
 
 ### Step 1: Check for Existing Atlas Recipe
 
@@ -146,7 +196,13 @@ For non-fiction manuscripts, propose: `topic-map.codex.yaml`, `key-arguments.cod
 
 For poetry collections, propose: `themes.codex.yaml`, `imagery.codex.yaml`, `devices.codex.yaml`, `emotional-arc.codex.yaml`.
 
-**Ask the user ONE question** (using AskUserQuestion) presenting the proposed structure:
+**If `atlas.sections` came from settings, skip this question entirely** — the project has
+already said which sections it wants. Report the structure and continue:
+
+> "Building {N} sections into `atlas/`, per your settings."
+
+Otherwise **ask the user ONE question** (using AskUserQuestion) presenting the proposed
+structure:
 
 > "Here's the atlas structure I'd recommend for your {genre} with {N} characters:"
 > ```

@@ -360,3 +360,121 @@ class TestEverySectionObeysSettings:
         block = doc.split('```json', 1)[1].split('```', 1)[0]
         documented = json.loads(block)['analysis']
         assert documented == DEFAULTS['analysis']
+
+
+class TestAtlasAndReaderSections:
+    """
+    One settings file, one section per command.
+
+    The alternative — a config file per command — is how a project ends up with
+    four places to look. `section` selects which command is asking.
+    """
+
+    def test_defaults_exist_for_every_section(self):
+        assert set(DEFAULTS) == {'version', 'analysis', 'atlas', 'reader'}
+        assert DEFAULTS['atlas']['output_dir'] == 'atlas'
+        assert DEFAULTS['reader']['output_dir'] == 'reader'
+        assert DEFAULTS['reader']['template'] == 'minimal'
+
+    def test_resolve_defaults_to_analysis(self, project):
+        _root, src = project
+        assert action_resolve({'source': str(src)})['section'] == 'analysis'
+
+    def test_atlas_output_is_project_relative_not_file_relative(self, project):
+        """An atlas is built once for the project, not beside one chapter."""
+        root, src = project
+        result = action_resolve({'source': str(src), 'section': 'atlas'})
+        assert result['output_dir'] == str(root / 'atlas')
+        assert result['output_dir'] != str(src.parent / 'atlas')
+
+    def test_reader_output_is_project_relative(self, project):
+        root, src = project
+        result = action_resolve({'source': str(src), 'section': 'reader'})
+        assert result['output_dir'] == str(root / 'reader')
+
+    def test_analysis_output_stays_beside_the_file(self, project):
+        _root, src = project
+        result = action_resolve({'source': str(src)})
+        assert result['report_dir'] == str(src.parent / 'analysis')
+
+    def test_a_section_only_reports_its_own_provenance(self, project):
+        root, src = project
+        write_settings(root, {'version': 1, 'reader': {'theme': 'dark'}})
+        result = action_resolve({'source': str(src), 'section': 'reader'})
+        assert result['configured'] == ['reader.theme']
+        assert all(k.startswith('reader.') for k in result['sources'])
+
+    def test_configuring_one_section_leaves_the_others_asking(self, project):
+        root, src = project
+        action_set({'path': str(src), 'updates': {'reader': {'theme': 'dark'}}})
+        assert action_resolve({'source': str(src), 'section': 'reader'})['configured']
+        assert action_resolve({'source': str(src), 'section': 'atlas'})['configured'] == []
+
+    def test_reader_template_is_validated(self, project):
+        _root, src = project
+        with pytest.raises(ValueError, match='reader.template'):
+            action_set({'path': str(src), 'updates': {'reader': {'template': 'fancy'}}})
+
+    def test_reader_theme_is_validated(self, project):
+        _root, src = project
+        with pytest.raises(ValueError, match='reader.theme'):
+            action_set({'path': str(src), 'updates': {'reader': {'theme': 'sepia'}}})
+
+    def test_atlas_sections_round_trip(self, project):
+        _root, src = project
+        action_set({'path': str(src),
+                    'updates': {'atlas': {'sections': ['characters', 'themes']}}})
+        assert action_resolve({'source': str(src),
+                               'section': 'atlas'})['sections'] == ['characters', 'themes']
+
+    def test_an_unknown_section_is_refused(self, project):
+        _root, src = project
+        with pytest.raises(ValueError, match='Unknown section'):
+            action_resolve({'source': str(src), 'section': 'kitchen'})
+
+    def test_a_reader_recipe_from_an_older_version_is_honoured(self, project):
+        root, src = project
+        recipe = root / '.chapterwise' / 'reader-recipe' / 'recipe.yaml'
+        recipe.parent.mkdir(parents=True)
+        recipe.write_text(yaml.safe_dump(
+            {'design': {'template': 'academic', 'theme': 'dark'}}), encoding='utf-8')
+        result = action_resolve({'source': str(src), 'section': 'reader'})
+        assert result['template'] == 'academic' and result['theme'] == 'dark'
+        assert result['sources']['reader.template'] == 'recipe'
+
+    def test_an_atlas_recipe_section_list_is_honoured(self, project):
+        root, src = project
+        recipe = root / '.chapterwise' / 'atlas-recipe' / 'recipe.yaml'
+        recipe.parent.mkdir(parents=True)
+        recipe.write_text(yaml.safe_dump({'sections': ['characters']}), encoding='utf-8')
+        assert action_resolve({'source': str(src),
+                               'section': 'atlas'})['sections'] == ['characters']
+
+    def test_project_dir_honours_the_same_three_path_forms(self, project):
+        from settings import resolve_project_dir
+        root, src = project
+        assert resolve_project_dir(src, 'atlas') == root / 'atlas'
+        assert resolve_project_dir(src, '/build/atlas') == root / 'build' / 'atlas'
+        assert resolve_project_dir(src, '~/atlases') == Path.home() / 'atlases'
+
+
+class TestAtlasAndReaderCommandsObeySettings:
+    """Every command that has a durable choice must read and offer to save it."""
+
+    COMMANDS = Path(__file__).parent.parent / 'plugins' / 'chapterwise' / 'commands'
+
+    @pytest.mark.parametrize('command,section', [('atlas', 'atlas'), ('reader', 'reader')])
+    def test_the_command_reads_settings_before_asking(self, command, section):
+        doc = (self.COMMANDS / f'{command}.md').read_text(encoding='utf-8')
+        assert 'settings.py resolve' in doc, f'/{command} must read settings'
+        assert f'"section": "{section}"' in doc
+
+    @pytest.mark.parametrize('command', ['atlas', 'reader'])
+    def test_the_command_offers_to_save(self, command):
+        doc = (self.COMMANDS / f'{command}.md').read_text(encoding='utf-8')
+        assert 'settings.py set' in doc, f'/{command} must offer to save settings'
+
+    @pytest.mark.parametrize('command', ['atlas', 'reader'])
+    def test_the_command_does_not_ask_what_is_configured(self, command):
+        doc = (self.COMMANDS / f'{command}.md').read_text(encoding='utf-8')
+        assert 'never ask' in doc.lower() or 'do not ask' in doc.lower()

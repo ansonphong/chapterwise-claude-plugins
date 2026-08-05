@@ -6,11 +6,14 @@ Project settings — the declared configuration for a Chapterwise project.
     echo '{"path": ".", "updates": {"analysis": {"report_format": "both"}}}' \
       | python3 settings.py set
     echo '{"source": "chapter.codex.yaml"}' | python3 settings.py resolve
+    echo '{"path": ".", "section": "reader"}' | python3 settings.py resolve
     echo '{}' | python3 settings.py defaults
 
 Settings live in `.chapterwise/settings.json` and answer "what should this
-project do by default" — which report format, which folder, how deep. They are
-declared once and committed.
+project do by default" — which report format, which folder, which reader
+template. One file, one section per command (`analysis`, `atlas`, `reader`), so
+there is one place to look rather than one per command. Declared once and
+committed.
 
 That is a different thing from the `*-recipe` folders next to them, which
 record what a command *did* on its last run so work is not redone. Settings are
@@ -34,9 +37,10 @@ SETTINGS_DIR = '.chapterwise'
 SETTINGS_FILE = 'settings.json'
 SETTINGS_VERSION = 1
 
-# Codex, in an `analysis/` folder beside the manuscript. Structured output is
-# the better default for a format-native tool: it re-imports, renders in the
-# web app, and can be analyzed further. `--report=markdown` is one flag away.
+# Analysis reports default to codex in an `analysis/` folder beside the
+# manuscript. Structured output is the better default for a format-native tool:
+# it re-imports, renders in the web app, and can be analyzed further.
+# `--report=markdown` is one flag away.
 DEFAULTS: Dict[str, Any] = {
     'version': SETTINGS_VERSION,
     'analysis': {
@@ -45,18 +49,49 @@ DEFAULTS: Dict[str, Any] = {
         'report_dir': 'analysis',
         'depth': 'auto',
     },
+    'atlas': {
+        'output_dir': 'atlas',
+        'sections': ['characters', 'timeline', 'themes', 'plot-structure',
+                     'locations', 'relationships'],
+    },
+    'reader': {
+        'output_dir': 'reader',
+        'template': 'minimal',
+        'theme': 'light',
+    },
 }
 
 VALID = {
     'analysis.report_format': ('markdown', 'codex', 'both'),
     'analysis.report': (True, False),
+    'reader.template': ('minimal', 'academic', 'custom'),
+    'reader.theme': ('light', 'dark'),
 }
 
-# Keys older `analysis-recipe` files used for the same settings.
-RECIPE_ALIASES = {
-    'report_format': ('analysis', 'report_format'),
-    'report_enabled': ('analysis', 'report'),
-    'depth': ('analysis', 'depth'),
+# Where each section's output goes, and what it is relative to. An analysis
+# report belongs beside the manuscript it describes; an atlas and a reader are
+# built once for the whole project.
+OUTPUT_DIRS = {
+    'analysis': ('report_dir', 'file'),
+    'atlas': ('output_dir', 'project'),
+    'reader': ('output_dir', 'project'),
+}
+
+# Settings-shaped keys that earlier versions left in `*-recipe/recipe.yaml`.
+# Dotted keys read into the recipe's nested blocks.
+RECIPE_INHERITANCE = {
+    'analysis': ('analysis-recipe', {
+        'report_format': 'report_format',
+        'report_enabled': 'report',
+        'depth': 'depth',
+    }),
+    'atlas': ('atlas-recipe', {
+        'sections': 'sections',
+    }),
+    'reader': ('reader-recipe', {
+        'design.template': 'template',
+        'design.theme': 'theme',
+    }),
 }
 
 
@@ -101,21 +136,30 @@ def _read_json(path: Path) -> Optional[Dict[str, Any]]:
         return None
 
 
-def _recipe_settings(project_root: Path) -> Dict[str, Any]:
-    """Settings-shaped keys left in an older analysis-recipe."""
-    recipe = project_root / SETTINGS_DIR / 'analysis-recipe' / 'recipe.yaml'
-    if not recipe.exists():
-        return {}
-    try:
-        import yaml
-        data = yaml.safe_load(recipe.read_text(encoding='utf-8')) or {}
-    except Exception:
-        return {}
+def _dig(data: Dict[str, Any], dotted: str) -> Any:
+    for part in dotted.split('.'):
+        if not isinstance(data, dict) or part not in data:
+            return None
+        data = data[part]
+    return data
 
+
+def _recipe_settings(project_root: Path) -> Dict[str, Any]:
+    """Settings-shaped keys left in older `*-recipe` folders."""
     found: Dict[str, Any] = {}
-    for key, (section, name) in RECIPE_ALIASES.items():
-        if key in data and data[key] is not None:
-            found.setdefault(section, {})[name] = data[key]
+    for section, (folder, aliases) in RECIPE_INHERITANCE.items():
+        recipe = project_root / SETTINGS_DIR / folder / 'recipe.yaml'
+        if not recipe.exists():
+            continue
+        try:
+            import yaml
+            data = yaml.safe_load(recipe.read_text(encoding='utf-8')) or {}
+        except Exception:
+            continue
+        for dotted, name in aliases.items():
+            value = _dig(data, dotted)
+            if value is not None:
+                found.setdefault(section, {})[name] = value
     return found
 
 
@@ -182,14 +226,31 @@ def resolve_report_dir(source: Path, report_dir: str) -> Path:
     `include`. Use `~` when you genuinely mean somewhere else on the machine.
     """
     raw = str(report_dir or DEFAULTS['analysis']['report_dir']).strip()
+    return _resolve(source, raw, 'file')
 
+
+def resolve_project_dir(path: Path, output_dir: str, default: str = '') -> Path:
+    """
+    Where a whole-project artifact belongs — an atlas, a reader.
+
+    Same three forms as `resolve_report_dir`, except a bare name is relative to
+    the project root rather than to any one file, because these are built once
+    for the project rather than per manuscript.
+    """
+    return _resolve(path, str(output_dir or default).strip(), 'project')
+
+
+def _resolve(path: Path, raw: str, relative_to: str) -> Path:
+    path = Path(path).expanduser().resolve()
     if raw.startswith('~'):
         return Path(os.path.expanduser(raw))
     if raw.startswith('/'):
-        return find_project_root(source) / raw.lstrip('/')
+        return find_project_root(path) / raw.lstrip('/')
     if raw.startswith('./'):
         raw = raw[2:]
-    return source.parent / raw
+    if relative_to == 'project':
+        return find_project_root(path) / raw
+    return (path if path.is_dir() else path.parent) / raw
 
 
 # ── actions ──────────────────────────────────────────────────────────────────
@@ -235,19 +296,36 @@ def action_set(data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def action_resolve(data: Dict[str, Any]) -> Dict[str, Any]:
-    """Everything the analysis path needs for one source file."""
-    source = Path(data['source']).expanduser().resolve()
+    """
+    Everything one command needs, with paths already turned into real paths.
+
+    `section` selects which command is asking — `analysis` (the default),
+    `atlas`, or `reader`. `source` is a manuscript for analysis and may be any
+    path inside the project for the others.
+    """
+    section = data.get('section', 'analysis')
+    if section not in OUTPUT_DIRS:
+        raise ValueError(f"Unknown section {section!r}. "
+                         f"Use one of: {', '.join(OUTPUT_DIRS)}")
+
+    source = Path(data.get('source') or data.get('path') or '.').expanduser().resolve()
     effective, sources, file_path, found = load(source)
-    analysis = effective.get('analysis', {})
+    values = dict(effective.get(section, {}))
+
+    dir_key, relative_to = OUTPUT_DIRS[section]
+    resolver = resolve_report_dir if relative_to == 'file' else resolve_project_dir
+    values[dir_key] = str(resolver(source, values.get(dir_key)))
+
     return {
         'found': found,
+        'section': section,
         'path': str(file_path),
         'source': str(source),
-        'report': analysis.get('report', True),
-        'report_format': analysis.get('report_format'),
-        'report_dir': str(resolve_report_dir(source, analysis.get('report_dir'))),
-        'depth': analysis.get('depth'),
-        'sources': sources,
+        'projectRoot': str(find_project_root(source)),
+        'sources': {k: v for k, v in sources.items() if k.startswith(f'{section}.')},
+        'configured': [k for k, v in sources.items()
+                       if v != 'default' and k.startswith(f'{section}.')],
+        **values,
     }
 
 

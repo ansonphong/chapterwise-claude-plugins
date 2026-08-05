@@ -234,6 +234,9 @@ Two rules worth internalizing:
 anything is asked and written only when you say so — the first real run offers to save
 what you just chose, and once the file exists you are never asked again.
 
+One file, one section per command, so there is one place to look rather than one per
+command:
+
 ```json
 {
   "version": 1,
@@ -242,6 +245,16 @@ what you just chose, and once the file exists you are never asked again.
     "report_format": "codex",
     "report_dir": "analysis",
     "depth": "auto"
+  },
+  "atlas": {
+    "output_dir": "atlas",
+    "sections": ["characters", "timeline", "themes",
+                 "plot-structure", "locations", "relationships"]
+  },
+  "reader": {
+    "output_dir": "reader",
+    "template": "minimal",
+    "theme": "light"
   }
 }
 ```
@@ -250,8 +263,20 @@ what you just chose, and once the file exists you are never asked again.
 |---|---|---|
 | `analysis.report` | `true` | Export a report at all |
 | `analysis.report_format` | `codex` | `markdown`, `codex`, or `both` |
-| `analysis.report_dir` | `analysis` | Where reports go, relative to the analyzed file |
+| `analysis.report_dir` | `analysis` | Where reports go, relative to **the analyzed file** |
 | `analysis.depth` | `auto` | Which nodes get their own pass |
+| `atlas.output_dir` | `atlas` | Where the atlas is built, relative to **the project root** |
+| `atlas.sections` | the six above | Which atlas sections to build |
+| `reader.output_dir` | `reader` | Where the reader is built, relative to **the project root** |
+| `reader.template` | `minimal` | `minimal`, `academic`, or `custom` |
+| `reader.theme` | `light` | Which theme the reader opens in |
+
+An analysis report belongs beside the manuscript it describes; an atlas and a reader are
+built once for the whole project. That is why the first is file-relative and the other
+two are project-relative.
+
+Sections are independent. Configuring the reader does not stop `/atlas` from asking about
+its sections on first run.
 
 **Resolution, lowest to highest: plugin defaults → `settings.json` → flags.** A flag wins
 for that run and is never written back — `--report=markdown` once is not a decision about
@@ -259,7 +284,11 @@ the project.
 
 Settings apply to **every** `/analysis` route — a single file, the course picker, `--plan`,
 and `--all` / `--glob` batches all read them and all export reports. A batch offers to save
-once at the end, not once per file.
+once at the end, not once per file. `/atlas` and `/reader` read their own sections the same
+way.
+
+`/research` still keeps its preferences in `.claude/chapterwise.local.md` — a separate,
+older surface that has not been folded in.
 
 `report_dir` resolves the way codex `include` paths do, so there is one rule to learn:
 

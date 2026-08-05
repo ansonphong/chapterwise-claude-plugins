@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.8.0] - 2026-08-05
+
+### Added
+
+- **`/atlas` and `/reader` have settings too.** One file, one section per
+  command, so a project has one place to look rather than one per command:
+
+  ```json
+  {
+    "atlas":  { "output_dir": "atlas", "sections": ["characters", "..."] },
+    "reader": { "output_dir": "reader", "template": "minimal", "theme": "light" }
+  }
+  ```
+
+  Both read settings before asking and skip the question when a value is
+  already configured — `/atlas` skips its structure question, `/reader` skips
+  template selection — and both offer once to save after a first successful
+  build.
+- **`settings.py resolve` takes a `section`** — `analysis` (default), `atlas`,
+  or `reader` — and returns that section's values with paths already resolved,
+  plus a `sources` map and `configured` list scoped to it. Configuring one
+  section leaves the others still asking.
+- **Output paths know what they belong to.** An analysis report is resolved
+  relative to the manuscript it describes; an atlas and a reader are resolved
+  relative to the project root, because they are built once for the project.
+  All three accept the same forms: bare and `./` relative, leading `/` from the
+  project root, `~` literal.
+- `reader.template` and `reader.theme` are validated against their real option
+  sets, so a typo is refused at write time rather than surfacing as a broken
+  build.
+
+### Fixed
+
+- **Reader and atlas choices from older versions are honoured.**
+  `design.template` and `design.theme` in a `reader-recipe`, and `sections` in
+  an `atlas-recipe`, are read until a settings file exists and folded in when
+  one is written — the same treatment analysis already had.
+
 ## [2.7.0] - 2026-08-05
 
 ### Fixed

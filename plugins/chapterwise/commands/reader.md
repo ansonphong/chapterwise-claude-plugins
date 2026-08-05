@@ -59,6 +59,59 @@ Specify a project directory explicitly. Use this when not running from inside a 
 
 ---
 
+## Settings
+
+`.chapterwise/settings.json` holds what this project builds by default. Read it before
+asking anything:
+
+```bash
+echo '{"path": ".", "section": "reader"}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/settings.py resolve
+```
+
+```json
+{
+  "reader": {
+    "output_dir": "reader",
+    "template": "minimal",
+    "theme": "light"
+  }
+}
+```
+
+| Key | Default | Meaning |
+|---|---|---|
+| `reader.template` | `minimal` | `minimal`, `academic`, or `custom` |
+| `reader.theme` | `light` | Which theme the reader opens in — the toggle still works either way |
+| `reader.output_dir` | `reader` | Folder, relative to the **project root** |
+
+`sources` marks each value `settings`, `recipe`, or `default`. **Never ask about a value
+that came from `settings` or `recipe`** — use it and say so in one clause. Ask only about
+`default` values. `--template` beats both for that run and is never written back.
+
+`output_dir` resolves the way codex `include` paths do: `reader` and `/reader` are the
+project root, `~/…` is a literal path.
+
+After the first successful build, if nothing was configured yet, offer once:
+
+> "Save these as this project's defaults? Academic template, dark theme."
+
+```bash
+echo '{"path": ".", "updates": {"reader": {"template": "academic", "theme": "dark", "output_dir": "reader"}}}' \
+  | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/settings.py set
+```
+
+Settings are intent, and are committed. `.chapterwise/reader-recipe/` stays what it has
+always been — the record of the last build, including any `custom-style.css` being
+iterated on.
+
+---
+
+## Step 0: Read settings
+
+Run `settings.py resolve` above. A configured `template` means Step 2 is skipped.
+
+---
+
 ## Step 1: Scan Project
 
 Read the project structure to understand what will be built.
@@ -99,7 +152,12 @@ For atlas projects:
 
 ## Step 2: Choose Template
 
-Present template options and gather the writer's preference.
+**Skip this step entirely if `reader.template` came from settings or a recipe** — the
+project has already chosen. Say so in one clause and continue:
+
+> "Building with the academic template, per your settings."
+
+Otherwise present template options and gather the writer's preference.
 
 **Use AskUserQuestion:**
 

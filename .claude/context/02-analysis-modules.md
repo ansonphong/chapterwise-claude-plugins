@@ -85,8 +85,12 @@ format in one AskUserQuestion call, both pre-answered by the scan's proposal, an
 afterwards to save them to `.chapterwise/settings.json`. Stating a format in prose and
 never offering the alternative is not asking — that was the v2.4.0 defect.
 
-`settings.py` owns the config layer: `plugin defaults → .chapterwise/settings.json →
-flags`. Defaults are **codex** into an `analysis/` folder beside the analyzed file.
+`settings.py` owns the config layer for the whole plugin, not just analysis: one
+`.chapterwise/settings.json` with a section per command (`analysis`, `atlas`, `reader`),
+resolved `plugin defaults → .chapterwise/settings.json → flags`. `resolve` takes a
+`section` and scopes its `sources`/`configured` to it, so configuring one command leaves
+the others asking. Analysis report dirs are file-relative; atlas and reader output dirs
+are project-relative, because those are built once for the project. Defaults are **codex** into an `analysis/` folder beside the analyzed file.
 `analysis_report.build()` reads settings itself, so a direct script call gets the same
 answer the command does. A `sources` map marks each value `default`, `recipe`, or
 `settings` — a command asks only about `default` values, which is what stops it asking
