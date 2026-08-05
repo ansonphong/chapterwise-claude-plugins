@@ -11,6 +11,7 @@ Structure matches chapterwise-app file-based analysis system:
 import json
 import logging
 import os
+import re
 import sys
 import uuid
 from datetime import datetime, timezone
@@ -37,6 +38,12 @@ DEFAULT_HISTORY_DEPTH = 3
 # Never guess a model name here — a wrong name is worse than an honest blank,
 # because the entry is a provenance record.
 UNKNOWN_MODEL = 'unknown'
+
+# A codex file can hold many analyzable nodes — a dome script is one file with
+# 36 beats inside. Each node's analysis is a separate entry in the same module,
+# distinguished by scope. Entries written before scopes existed carry no scope
+# attribute and are treated as ROOT_SCOPE, so old files keep working untouched.
+ROOT_SCOPE = 'root'
 
 # Use shared schema validator
 try:
@@ -97,6 +104,17 @@ def create_analysis_file_structure(source_path: Path, source_hash: str) -> Dict:
     }
 
 
+def _scope_slug(scope: str) -> str:
+    """
+    Short token appended to an entry id to keep scoped entries distinct.
+
+    Must satisfy the analysis schema's entry-id pattern, which allows a
+    trailing `-[a-z0-9]+` only — hence alphanumerics, no separators.
+    """
+    slug = re.sub(r'[^A-Za-z0-9]+', '', scope).lower()
+    return slug[:24] or ROOT_SCOPE
+
+
 def create_analysis_entry(
     source_hash: str,
     model: str,
@@ -104,11 +122,18 @@ def create_analysis_entry(
     summary: str = '',
     children: List[Dict] = None,
     tags: List[str] = None,
-    entry_attributes: List[Dict] = None
+    entry_attributes: List[Dict] = None,
+    scope: str = ROOT_SCOPE,
+    scope_name: Optional[str] = None,
+    scope_path: Optional[str] = None,
+    scope_depth: Optional[int] = None,
+    scope_index: Optional[int] = None
 ) -> Dict:
     """Create a single analysis entry node (Codex V1.3 format)."""
     now = datetime.now(timezone.utc)
-    entry_id = f"entry-{now.strftime('%Y%m%dT%H%M%SZ')}"
+    # Timestamps are second-resolution, and a scoped run writes dozens of
+    # entries well inside one second — the scope keeps ids distinct.
+    entry_id = f"entry-{now.strftime('%Y%m%dT%H%M%SZ')}-{_scope_slug(scope)}"
 
     entry = {
         'id': entry_id,
@@ -118,10 +143,22 @@ def create_analysis_entry(
             {'key': 'model', 'value': model},
             {'key': 'sourceHash', 'value': source_hash},
             {'key': 'analysisStatus', 'value': 'current'},
-            {'key': 'timestamp', 'value': now.isoformat().replace('+00:00', 'Z')}
+            {'key': 'timestamp', 'value': now.isoformat().replace('+00:00', 'Z')},
+            {'key': 'scope', 'value': scope}
         ],
         'body': body
     }
+
+    # Node metadata is meaningless for a whole-file entry.
+    if scope != ROOT_SCOPE:
+        if scope_name:
+            _set_attribute(entry, 'scopeName', scope_name)
+        if scope_path:
+            _set_attribute(entry, 'scopePath', scope_path)
+        if scope_depth is not None:
+            _set_attribute(entry, 'scopeDepth', scope_depth)
+        if scope_index is not None:
+            _set_attribute(entry, 'scopeIndex', scope_index)
 
     if summary:
         entry['summary'] = summary
@@ -162,6 +199,35 @@ def resolve_model(
     return UNKNOWN_MODEL
 
 
+def entry_scope(entry: Dict[str, Any]) -> str:
+    """
+    Scope of an existing entry.
+
+    Entries written before scopes existed have no scope attribute; they were
+    whole-file analyses, so they read as ROOT_SCOPE.
+    """
+    value = _get_attribute(entry, 'scope')
+    return value if isinstance(value, str) and value.strip() else ROOT_SCOPE
+
+
+def _trim_history_per_scope(entries: List[Dict], history_depth: int) -> List[Dict]:
+    """
+    Keep the newest `history_depth` entries *for each scope*, preserving the
+    overall newest-first order.
+
+    Trimming the flat list instead would delete other nodes' analyses: a
+    36-beat script writes 37 entries into one module node, and a flat
+    `entries[:3]` would keep three of them.
+    """
+    kept, seen = [], {}
+    for entry in entries:
+        scope = entry_scope(entry)
+        seen[scope] = seen.get(scope, 0) + 1
+        if seen[scope] <= history_depth:
+            kept.append(entry)
+    return kept
+
+
 def _get_or_create_module(data: Dict[str, Any], module_name: str) -> Dict[str, Any]:
     """Find or create a module node in children array."""
     children = data.setdefault('children', [])
@@ -187,7 +253,12 @@ def add_analysis_result(
     module_name: str,
     analysis_content: Dict[str, Any],
     model: Optional[str] = None,
-    history_depth: int = DEFAULT_HISTORY_DEPTH
+    history_depth: int = DEFAULT_HISTORY_DEPTH,
+    scope: str = ROOT_SCOPE,
+    scope_name: Optional[str] = None,
+    scope_path: Optional[str] = None,
+    scope_depth: Optional[int] = None,
+    scope_index: Optional[int] = None
 ) -> Path:
     """
     Add analysis result to the .analysis.json file.
@@ -223,10 +294,12 @@ def add_analysis_result(
     # Get or create module node
     module_node = _get_or_create_module(data, module_name)
 
-    # Mark old entries as stale
+    # Stale only the scope being rewritten. Other scopes are different nodes,
+    # not older versions of this one.
     for entry in module_node.get('children', []):
-        _set_attribute(entry, 'analysisStatus', 'stale')
-        entry['status'] = 'draft'  # Demote to draft
+        if entry_scope(entry) == scope:
+            _set_attribute(entry, 'analysisStatus', 'stale')
+            entry['status'] = 'draft'  # Demote to draft
 
     # Create new entry
     new_entry = create_analysis_entry(
@@ -236,13 +309,19 @@ def add_analysis_result(
         summary=analysis_content.get('summary', ''),
         children=analysis_content.get('children', []),
         tags=analysis_content.get('tags', []),
-        entry_attributes=analysis_content.get('attributes', [])
+        entry_attributes=analysis_content.get('attributes', []),
+        scope=scope,
+        scope_name=scope_name,
+        scope_path=scope_path,
+        scope_depth=scope_depth,
+        scope_index=scope_index
     )
 
-    # Prepend to history and trim to depth
+    # Prepend, then trim history per scope. Trimming the flat list would
+    # discard other nodes' analyses entirely.
     entries = module_node.setdefault('children', [])
     entries.insert(0, new_entry)
-    module_node['children'] = entries[:history_depth]
+    module_node['children'] = _trim_history_per_scope(entries, history_depth)
 
     # Validate before writing
     is_valid, errors = _validate_analysis(data)
@@ -263,29 +342,51 @@ def add_analysis_result(
 if __name__ == '__main__':
     argv = sys.argv[1:]
 
-    # Pull --model out before positional parsing.
-    cli_model = None
+    # Pull flags out before positional parsing.
+    FLAGS = ('--model', '--scope', '--scope-name', '--scope-path',
+             '--scope-depth', '--scope-index')
+    flags = {}
     positional = []
     i = 0
     while i < len(argv):
         arg = argv[i]
-        if arg == '--model':
-            if i + 1 >= len(argv):
-                logger.error("--model requires a value")
-                sys.exit(1)
-            cli_model = argv[i + 1]
-            i += 2
-            continue
-        if arg.startswith('--model='):
-            cli_model = arg.split('=', 1)[1]
-            i += 1
+        matched = next((f for f in FLAGS if arg == f or arg.startswith(f + '=')), None)
+        if matched:
+            if arg == matched:
+                if i + 1 >= len(argv):
+                    logger.error(f"{matched} requires a value")
+                    sys.exit(1)
+                flags[matched] = argv[i + 1]
+                i += 2
+            else:
+                flags[matched] = arg.split('=', 1)[1]
+                i += 1
             continue
         positional.append(arg)
         i += 1
 
+    cli_model = flags.get('--model')
+
+    def _int_flag(name):
+        raw = flags.get(name)
+        if raw is None:
+            return None
+        try:
+            return int(raw)
+        except ValueError:
+            logger.error(f"{name} must be an integer, got {raw!r}")
+            sys.exit(1)
+
     if len(positional) < 3:
-        logger.error("Usage: analysis_writer.py <source_file> <module_name> <analysis_json> [--model NAME]")
-        logger.error("       analysis_writer.py <source_file> <module_name> - [--model NAME]  (reads stdin)")
+        logger.error("Usage: analysis_writer.py <source_file> <module_name> <analysis_json> [flags]")
+        logger.error("       analysis_writer.py <source_file> <module_name> - [flags]  (reads stdin)")
+        logger.error("")
+        logger.error("Flags: --model NAME")
+        logger.error("       --scope root|node:<id>   --scope-name NAME   --scope-path PATH")
+        logger.error("       --scope-depth N          --scope-index N")
+        logger.error("")
+        logger.error("Scope addresses a node inside the source file. Omit it for a")
+        logger.error("whole-file analysis. Each scope keeps its own history.")
         logger.error("")
         logger.error("The model is recorded as provenance. Report the model that actually")
         logger.error("produced the analysis — via --model, a \"model\" key in the payload, or")
@@ -309,5 +410,14 @@ if __name__ == '__main__':
             "Pass --model, include a \"model\" key, or set CHAPTERWISE_ANALYSIS_MODEL."
         )
 
-    output_path = add_analysis_result(source_path, module_name, analysis_content, model=cli_model)
-    logger.info(f"Written to: {output_path} (model: {resolved})")
+    scope = flags.get('--scope') or ROOT_SCOPE
+    output_path = add_analysis_result(
+        source_path, module_name, analysis_content,
+        model=cli_model,
+        scope=scope,
+        scope_name=flags.get('--scope-name'),
+        scope_path=flags.get('--scope-path'),
+        scope_depth=_int_flag('--scope-depth'),
+        scope_index=_int_flag('--scope-index'),
+    )
+    logger.info(f"Written to: {output_path} (model: {resolved}, scope: {scope})")
