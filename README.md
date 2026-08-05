@@ -1,4 +1,4 @@
-# ChapterWise — the Claude Code plugin
+# 🪶 Chapterwise — the Claude Code plugin
 
 A complete writing toolkit for Claude Code. Import a manuscript from almost any format, run editorial analysis across 33 modules, synthesize a story atlas, and build a static reader — all against plain-text files you own, tracked in Git.
 
