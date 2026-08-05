@@ -113,18 +113,19 @@ class TestNoHardcodedModelDefaults:
             f"model must come from the caller: {offenders}"
         )
 
-    @pytest.mark.parametrize('relpath', [
-        'modules/_output-format.md',
-        'commands/analysis.md',
-        'commands/atlas.md',
-        'README.md',
-    ])
-    def test_docs_do_not_ship_a_copyable_model_name(self, relpath):
+    @pytest.mark.parametrize('path', [
+        PLUGIN / 'modules' / '_output-format.md',
+        PLUGIN / 'commands' / 'analysis.md',
+        PLUGIN / 'commands' / 'atlas.md',
+        # Repo-root README — the plugin-level one is now a stub pointing here.
+        Path(__file__).parent.parent / 'README.md',
+    ], ids=lambda p: p.name)
+    def test_docs_do_not_ship_a_copyable_model_name(self, path):
         """
         Example blocks get copied verbatim by agents. Placeholders cannot be
         mistaken for the right answer; 'claude-sonnet-4' can.
         """
-        text = (PLUGIN / relpath).read_text(encoding='utf-8')
+        text = path.read_text(encoding='utf-8')
         # Only flags a model name sitting in a value position — the thing an
         # agent copies. Prose naming a model as an illustrative example is fine.
         value_position = re.compile(
@@ -132,4 +133,4 @@ class TestNoHardcodedModelDefaults:
             re.I,
         )
         offenders = [line.strip() for line in text.splitlines() if value_position.search(line)]
-        assert not offenders, f"{relpath} ships a copyable model name: {offenders}"
+        assert not offenders, f"{path.name} ships a copyable model name: {offenders}"
