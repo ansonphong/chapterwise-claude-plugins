@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.10.2] - 2026-08-05
+
+### Fixed
+
+- **Report filenames no longer carry runs of hyphens.** A manuscript called
+  `Chrysalis - Dome Show Script.codex.yaml` produced
+  `chrysalis---dome-show-script-immersive-design-2026-08-05.codex.yaml`. The report
+  slug replaced each space with a hyphen and dropped the rest of the punctuation
+  individually, so " - " became three. `analysis_writer.analysis_file_id` had the same
+  bug and was fixed in 2.5.0; its sibling in `analysis_report.py` was not, and the two
+  functions slug the same manuscript name for two different files. Both collapse runs
+  now, and `report_slug` is a named function rather than two inline expressions so the
+  rule has somewhere to live. Found by running `/analysis` end to end on a real dome
+  script rather than by a test — the unit tests all used single-word fixture names.
+
 ## [2.10.1] - 2026-08-05
 
 ### Fixed

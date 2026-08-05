@@ -18,8 +18,8 @@ SCRIPTS = Path(__file__).parent.parent / 'plugins' / 'chapterwise' / 'scripts'
 SCRIPT = SCRIPTS / 'analysis_report.py'
 sys.path.insert(0, str(SCRIPTS))
 
-from analysis_report import ROOT_SCOPE, build  # noqa: E402
-from analysis_writer import add_analysis_result  # noqa: E402
+from analysis_report import ROOT_SCOPE, build, report_slug  # noqa: E402
+from analysis_writer import add_analysis_result, analysis_file_id  # noqa: E402
 
 MODULE = 'immersive_design'
 
@@ -100,6 +100,45 @@ class TestOutputLocation:
         first = build(args)
         Path(first['path']).write_text('sentinel', encoding='utf-8')
         assert build({**args, 'force': True})['status'] == 'written'
+
+
+class TestSlug:
+    """
+    The report slug and the analysis-file id slug the same manuscript name for
+    two different files, and had drifted: the id collapsed runs of punctuation
+    and the report did not, so "Chrysalis - Dome Show Script" produced a report
+    called `chrysalis---dome-show-script-…`. They follow one rule now.
+    """
+
+    @pytest.mark.parametrize('name,expected', [
+        ('Chrysalis - Dome Show Script.codex.yaml', 'chrysalis-dome-show-script'),
+        ('Chapter 01.codex.yaml', 'chapter-01'),
+        ('a  b   c.codex.md', 'a-b-c'),
+        ('-- leading and trailing --.codex.yaml', 'leading-and-trailing'),
+        ('Ünïcødé Tïtlé.codex.yaml', 'n-c-d-t-tl'),
+        ('!!!.codex.yaml', 'manuscript'),
+    ])
+    def test_punctuation_runs_collapse_to_one_hyphen(self, name, expected):
+        assert report_slug(name) == expected
+
+    def test_never_emits_a_double_hyphen(self):
+        assert '--' not in report_slug('Chrysalis - Dome Show Script.codex.yaml')
+
+    def test_agrees_with_the_analysis_file_id(self):
+        """Same input, same separator rule — only case and suffix differ."""
+        name = 'Chrysalis - Dome Show Script.codex.yaml'
+        assert analysis_file_id(name) == 'Chrysalis-Dome-Show-Script-analysis'
+        assert report_slug(name) == 'chrysalis-dome-show-script'
+
+    def test_end_to_end_filename_has_no_run(self, show):
+        spaced = show.parent / 'Chrysalis - Dome Show Script.codex.yaml'
+        spaced.write_text(show.read_text(encoding='utf-8'), encoding='utf-8')
+        add_analysis_result(str(spaced), MODULE, {'body': 'x', 'summary': 'y'},
+                            model='test')
+        result = build({'source': str(spaced), 'module': MODULE,
+                        'format': 'markdown', 'generated': '2026-08-04'})
+        assert Path(result['path']).name == (
+            'chrysalis-dome-show-script-immersive-design-2026-08-04.md')
 
 
 class TestDeterminism:

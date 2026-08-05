@@ -21,6 +21,7 @@ and resolves it by the same rules; whether output is visible or tucked into
 import hashlib
 import json
 import logging
+import re
 import sys
 import uuid
 from datetime import datetime, timezone
@@ -138,6 +139,19 @@ def _opens_with_heading(content: str, name: str) -> bool:
     if not first.startswith('#'):
         return False
     return first.lstrip('#').strip().casefold() == name.strip().casefold()
+
+
+def report_slug(source_filename: str) -> str:
+    """
+    Filename-safe slug for a report, from the manuscript's filename.
+
+    Runs of punctuation collapse to a single hyphen, the same way
+    `analysis_writer.analysis_file_id` does — a manuscript called
+    "Chrysalis - Dome Show Script" is one hyphen, not three. The two functions
+    slug the same input for different files and had drifted apart.
+    """
+    base = source_filename.split('.codex')[0].lower()
+    return re.sub(r'[^a-z0-9_]+', '-', base).strip('-') or 'manuscript'
 
 
 def stable_id(*parts: str) -> str:
@@ -419,9 +433,7 @@ def build(data: Dict[str, Any]) -> Dict[str, Any]:
         'items': items,
     }
 
-    slug = source_path.name.split('.codex')[0].lower().replace(' ', '-')
-    slug = ''.join(c for c in slug if c.isalnum() or c in '-_')
-    stem = f"{slug}-{module.replace('_', '-')}-{generated}"
+    stem = f"{report_slug(source_path.name)}-{module.replace('_', '-')}-{generated}"
 
     wanted = RENDERABLE if fmt == 'both' else (fmt,)
     targets = [(f, output_dir / f"{stem}{EXTENSIONS[f]}") for f in wanted]
