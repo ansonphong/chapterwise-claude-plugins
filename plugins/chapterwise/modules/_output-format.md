@@ -50,7 +50,7 @@ The `analysis_writer.py` script wraps your output in the full Codex V1.3 structu
           "type": "analysis-entry",
           "status": "published",
           "attributes": [
-            {"key": "model", "value": "claude-sonnet-4"},
+            {"key": "model", "value": "<the model that actually ran>"},
             {"key": "sourceHash", "value": "16-char-hash"},
             {"key": "analysisStatus", "value": "current"},
             {"key": "timestamp", "value": "ISO-8601"}
@@ -73,6 +73,10 @@ The `analysis_writer.py` script wraps your output in the full Codex V1.3 structu
 3. **children** - Structured sub-sections (2-5 recommended)
 4. **attributes** - Scored metrics with dataType hint
 5. **tags** - Relevant keywords for searchability
+6. **model** - Report the model you actually are (e.g. `claude-opus-5`). Do NOT
+   copy the example value and do NOT guess. The entry is a provenance record —
+   an unreported model is written as `unknown`, which is honest; a wrong model
+   name is not. Alternatively pass `--model` to `analysis_writer.py`.
 
 ## Important Notes
 

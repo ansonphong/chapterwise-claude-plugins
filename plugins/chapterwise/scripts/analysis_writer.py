@@ -33,6 +33,11 @@ except ImportError:  # standalone execution outside the scripts directory
 
 DEFAULT_HISTORY_DEPTH = 3
 
+# Recorded when the caller does not report which model produced the analysis.
+# Never guess a model name here — a wrong name is worse than an honest blank,
+# because the entry is a provenance record.
+UNKNOWN_MODEL = 'unknown'
+
 # Use shared schema validator
 try:
     # Add parent scripts directory to path for cross-plugin imports
@@ -135,6 +140,28 @@ def create_analysis_entry(
     return entry
 
 
+def resolve_model(
+    model: Optional[str] = None,
+    analysis_content: Optional[Dict[str, Any]] = None
+) -> str:
+    """
+    Determine which model to record on an analysis entry.
+
+    Precedence: explicit argument, then the payload's own "model" key, then
+    the CHAPTERWISE_ANALYSIS_MODEL environment variable, then UNKNOWN_MODEL.
+    Blank and whitespace-only values are treated as absent.
+    """
+    candidates = [
+        model,
+        (analysis_content or {}).get('model'),
+        os.environ.get('CHAPTERWISE_ANALYSIS_MODEL'),
+    ]
+    for candidate in candidates:
+        if isinstance(candidate, str) and candidate.strip():
+            return candidate.strip()
+    return UNKNOWN_MODEL
+
+
 def _get_or_create_module(data: Dict[str, Any], module_name: str) -> Dict[str, Any]:
     """Find or create a module node in children array."""
     children = data.setdefault('children', [])
@@ -159,13 +186,19 @@ def add_analysis_result(
     source_path: Path,
     module_name: str,
     analysis_content: Dict[str, Any],
-    model: str = 'claude-sonnet-4',
+    model: Optional[str] = None,
     history_depth: int = DEFAULT_HISTORY_DEPTH
 ) -> Path:
     """
     Add analysis result to the .analysis.json file.
     Creates file if doesn't exist, prepends to module's children (history).
+
+    The recorded model is resolved, in order, from: the explicit `model`
+    argument, a "model" key in the analysis payload (the agent reporting
+    itself), the CHAPTERWISE_ANALYSIS_MODEL environment variable, and
+    finally UNKNOWN_MODEL.
     """
+    model = resolve_model(model, analysis_content)
     source_path = Path(source_path)
     analysis_path = get_analysis_file_path(source_path)
     source_content = source_path.read_text(encoding='utf-8')
@@ -228,20 +261,53 @@ def add_analysis_result(
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 4:
-        logger.error("Usage: analysis_writer.py <source_file> <module_name> <analysis_json>")
-        logger.error("       analysis_writer.py <source_file> <module_name> - (reads from stdin)")
+    argv = sys.argv[1:]
+
+    # Pull --model out before positional parsing.
+    cli_model = None
+    positional = []
+    i = 0
+    while i < len(argv):
+        arg = argv[i]
+        if arg == '--model':
+            if i + 1 >= len(argv):
+                logger.error("--model requires a value")
+                sys.exit(1)
+            cli_model = argv[i + 1]
+            i += 2
+            continue
+        if arg.startswith('--model='):
+            cli_model = arg.split('=', 1)[1]
+            i += 1
+            continue
+        positional.append(arg)
+        i += 1
+
+    if len(positional) < 3:
+        logger.error("Usage: analysis_writer.py <source_file> <module_name> <analysis_json> [--model NAME]")
+        logger.error("       analysis_writer.py <source_file> <module_name> - [--model NAME]  (reads stdin)")
+        logger.error("")
+        logger.error("The model is recorded as provenance. Report the model that actually")
+        logger.error("produced the analysis — via --model, a \"model\" key in the payload, or")
+        logger.error("CHAPTERWISE_ANALYSIS_MODEL. Unreported models are recorded as 'unknown'.")
         sys.exit(1)
 
-    source_path = Path(sys.argv[1])
-    module_name = sys.argv[2]
+    source_path = Path(positional[0])
+    module_name = positional[1]
 
-    if sys.argv[3] == '-':
+    if positional[2] == '-':
         analysis_json = sys.stdin.read()
     else:
-        analysis_json = sys.argv[3]
+        analysis_json = positional[2]
 
     analysis_content = json.loads(analysis_json)
 
-    output_path = add_analysis_result(source_path, module_name, analysis_content)
-    logger.info(f"Written to: {output_path}")
+    resolved = resolve_model(cli_model, analysis_content)
+    if resolved == UNKNOWN_MODEL:
+        logger.warning(
+            "No model reported — recording 'unknown'. "
+            "Pass --model, include a \"model\" key, or set CHAPTERWISE_ANALYSIS_MODEL."
+        )
+
+    output_path = add_analysis_result(source_path, module_name, analysis_content, model=cli_model)
+    logger.info(f"Written to: {output_path} (model: {resolved})")

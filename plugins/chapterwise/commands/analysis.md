@@ -683,7 +683,7 @@ Each analysis run produces or updates a `.analysis.json` file using Codex V1.3 f
           "type": "analysis-entry",
           "status": "published",
           "attributes": [
-            {"key": "model", "value": "claude-sonnet-4-6"},
+            {"key": "model", "value": "<the model that actually ran>"},
             {"key": "sourceHash", "value": "a1b2c3d4e5f67890"},
             {"key": "analysisStatus", "value": "current"},
             {"key": "timestamp", "value": "2026-02-27T15:00:00Z"}
