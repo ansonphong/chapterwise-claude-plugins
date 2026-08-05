@@ -4,6 +4,8 @@ A complete writing toolkit for Claude Code. Import a manuscript from almost any 
 
 24 slash commands. No account, no lock-in, no server. Your manuscript stays on your disk in open formats.
 
+**[Documentation](https://chapterwise.app/docs)** · [Chapterwise](https://chapterwise.app) · [Install](#install) · [Command reference](#command-reference) · [Changelog](CHANGELOG.md)
+
 > This repository is a Claude Code **plugin marketplace**. The plugin itself lives in
 > [`plugins/chapterwise/`](plugins/chapterwise); the manifest at
 > [`.claude-plugin/marketplace.json`](.claude-plugin/marketplace.json) points at it.
@@ -1532,7 +1534,8 @@ A few house rules worth knowing, since they shape how the plugin behaves:
 
 ## Links
 
-- [ChapterWise](https://chapterwise.app)
+- [Documentation](https://chapterwise.app/docs)
+- [Chapterwise](https://chapterwise.app)
 - [Repository](https://github.com/ansonphong/chapterwise-plugins)
 - [Changelog](CHANGELOG.md)
 - [License](LICENSE) — MIT
